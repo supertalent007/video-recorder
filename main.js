@@ -1,6 +1,11 @@
+// const API_URL = "http://localhost:5200/api";
+// // const API_URL = "http://alpha.yourarchiv.com/api";
+// // const API_URL = "https://yourarchiv.com/api";
+
 // const API_URL = "http://localhost:5000/api";
-const API_URL = "http://alpha.yourarchiv.com/api";
-// const API_URL = "http://yourarchiv.com/api";
+// const API_URL = "http://alpha.yourarchiv.com/api";
+const API_URL = "https://yourarchiv.com/api";
+
 
 let shouldStop = false;
 document.body.style.zoom = "80%";
@@ -58,6 +63,7 @@ stopButton.addEventListener('click', function () {
 
 recordButton.addEventListener('click', function () {
     recordScreen();
+    $('#videoss').css('display', 'block');
 });
 
 crop.addEventListener('click', function () {

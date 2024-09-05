@@ -1,0 +1,45 @@
+/* modalStyles.css */
+#screenRecorderModal {
+    background-color: rgba(0, 0, 0, 0.5);
+    /* Adds a transparent background */
+}
+
+#screenRecorderModalContent {
+    font-family: 'Arial', sans-serif;
+    color: #fff;
+    background-color: #333;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+#btnRecordStart,
+#btnRecordStop {
+    background-color: #28a745;
+    border: none;
+    padding: 10px;
+    color: white;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#btnRecordStop {
+    background-color: #dc3545;
+}
+
+#closeModal {
+    background-color: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+}
+
+#timer {
+    font-size: 18px;
+    margin-left: 15px;
+}
+
+.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}

@@ -1,10 +1,10 @@
-// const API_URL = "http://localhost:5000/api";
-// const WEBSITE_URL = "http://localhost:3000";
+// const API_URL = "http://127.0.0.1:5200/api";
+// const WEBSITE_URL = "http://localhost:3000/all#";
 
-const API_URL = "http://alpha.yourarchiv.com/api";
-const WEBSITE_URL = "http://alpha.yourarchiv.com";
-// const API_URL = "http://yourarchiv.com/api";
-// const WEBSITE_URL = "http://yourarchiv.com";
+// const API_URL = "http://alpha.yourarchiv.com/api";
+// const WEBSITE_URL = "http://alpha.yourarchiv.com";
+const API_URL = "https://yourarchiv.com/api";
+const WEBSITE_URL = "https://yourarchiv.com";
 
 const progressBar = document.getElementById('progress-bar-inner');
 const cancelButton = document.getElementById('cancel-button');
@@ -318,139 +318,171 @@ function Crop() {
 /******* */
 
 /*** */
-function Upload() {
-	// Show progress bar
-	progressBar.style.width = "0%";
-	progressBar.style.visibility = "visible";
-	cancelButton.style.visibility = "visible";
-	progressBar.style.display = "block";
-	cancelButton.style.display = "block";
+	function Upload() {
+		// Show progress bar
+		progressBar.style.width = "0%";
+		progressBar.style.visibility = "visible";
+		cancelButton.style.visibility = "visible";
+		progressBar.style.display = "block";
+		cancelButton.style.display = "block";
 
-	var xhr = new XMLHttpRequest();
-	var isUploadCanceled = false;
-
-
-	cancelButton.addEventListener("click", function () {
-		// Cancel button clicked, abort the upload
-		isUploadCanceled = true;
-		xhr.abort();
-		// Hide progress bar and cancel button
-		progressBar.style.visibility = "hidden";
-		cancelButton.style.visibility = "hidden";
-		progressBar.style.display = "none";
-		cancelButton.style.display = "none";
-	});
-
-	xhr.upload.addEventListener("progress", function (event) {
-		if (event.lengthComputable) {
-			var progress = Math.round((event.loaded / event.total) * 100);
-			progressBar.style.width = progress + "%";
-		}
-	});
-
-	xhr.addEventListener("load", function () {
+		var xhr = new XMLHttpRequest();
+		var isUploadCanceled = false;
 
 
-		if (xhr.status === 200) {
-			// Upload completed successfully
-			localStorage.removeItem("description");
-			localStorage.removeItem("newSelections");
-			localStorage.removeItem("id");
+		cancelButton.addEventListener("click", function () {
+			// Cancel button clicked, abort the upload
+			isUploadCanceled = true;
+			xhr.abort();
 			// Hide progress bar and cancel button
-			progressBar.style.visibility = "visible";
-			cancelButton.style.visibility = "visible";
-
-			setTimeout(() => {
-				window.close();
-			}, 1000);
-
-
-			console.log('Request sent successfully.');
-			// Additional success handling code
-		} else {
-			const x = JSON.parse(xhr.response)
-			console.log('Request failed with status:',)
-			alert(x.error.message[0])
+			progressBar.style.visibility = "hidden";
+			cancelButton.style.visibility = "hidden";
 			progressBar.style.display = "none";
 			cancelButton.style.display = "none";
-		}
+		});
 
-		// if (!isUploadCanceled) {
-		// // Upload completed successfully
-		// localStorage.removeItem("description");
-		// localStorage.removeItem("newSelections");
-		// localStorage.removeItem("id");
-		// // Hide progress bar and cancel button
-		// progressBar.style.visibility = "visible";
-		// cancelButton.style.visibility = "visible";
+		xhr.upload.addEventListener("progress", function (event) {
+			if (event.lengthComputable) {
+				var progress = Math.round((event.loaded / event.total) * 100);
+				progressBar.style.width = progress + "%";
+			}
+		});
 
-		// setTimeout(() => {
-		// 	window.close();
-		// }, 1000);
-		// 	}
-	});
+		xhr.addEventListener("load", function () {
+			
 
-	xhr.addEventListener("error", function (error) {
-		console.log("Error uploading:");
-		console.log(error);
-		// Hide progress bar and cancel button
-		progressBar.style.visibility = "hidden";
-		cancelButton.style.visibility = "hidden";
-		progressBar.style.display = "none";
-		cancelButton.style.display = "none";
-	});
+			if (xhr.status === 200) {
+				// Upload completed successfully
+				localStorage.removeItem("description");
+				localStorage.removeItem("newSelections");
+				localStorage.removeItem("id");
+				// Hide progress bar and cancel button
+				progressBar.style.visibility = "visible";
+				cancelButton.style.visibility = "visible";
 
-	chrome.storage.local.get((res) => {
-		var captureData = localStorage.getItem("captureData");
-		if (captureData) {
-			captureData = JSON.parse(captureData);
+				setTimeout(() => {
+					window.close();
+				}, 1000);
 
-			var username = captureData.username;
-			var password = captureData.password;
-			var selections = JSON.parse(localStorage.getItem("newSelections")) || [];
-			var connections = captureData.connections;
-			var metadata = {
-				title: captureData.title,
-				description: captureData.description,
-				date: captureData.date,
-				url: captureData.url,
-				pageDate: captureData.pageDate,
-			};
-			var quality = captureData.quality;
 
-			var maxWidth = window.screen.width; // Define the maximum width for the uploaded image
+				console.log('Request sent successfully.');
+				// Additional success handling code
+			} else {
+				const x = JSON.parse(xhr.response)
+				console.log('Request failed with status:',)
+				alert(x.error.message[0])
+				progressBar.style.display = "none";
+				cancelButton.style.display = "none";
+			}
 
-			// Create a new temporary canvas for resizing
-			var tempCanvas = document.createElement("canvas");
-			var tempContext = tempCanvas.getContext("2d");
+			// if (!isUploadCanceled) {
+			// // Upload completed successfully
+			// localStorage.removeItem("description");
+			// localStorage.removeItem("newSelections");
+			// localStorage.removeItem("id");
+			// // Hide progress bar and cancel button
+			// progressBar.style.visibility = "visible";
+			// cancelButton.style.visibility = "visible";
 
-			// Calculate the resized dimensions
-			var scaleFactor = maxWidth / canvas.width;
-			var resizedWidth = maxWidth;
-			var resizedHeight = Math.floor(canvas.height * scaleFactor);
+			// setTimeout(() => {
+			// 	window.close();
+			// }, 1000);
+			// 	}
+		});
 
-			// Set the temporary canvas dimensions
-			tempCanvas.width = resizedWidth;
-			tempCanvas.height = resizedHeight;
+		xhr.addEventListener("error", function (error) {
+			console.log("Error uploading:");
+			console.log(error);
+			// Hide progress bar and cancel button
+			progressBar.style.visibility = "hidden";
+			cancelButton.style.visibility = "hidden";
+			progressBar.style.display = "none";
+			cancelButton.style.display = "none";
+		});
 
-			// Draw the resized image onto the temporary canvas
-			tempContext.drawImage(canvas, 0, 0, resizedWidth, resizedHeight);
+		chrome.storage.local.get((res) => {
+			console.log("res",res);
+			var captureData = localStorage.getItem("captureData");
+			console.info("captureData============",captureData)
+			// if (captureData) {
+			// 	captureData = JSON.parse(captureData);
 
-			// Get the resized image data from the temporary canvas
-			var resizedImageData = tempCanvas.toDataURL("image/jpeg", quality / 100);
+			// 	var username = captureData.username;
+			// 	var password = captureData.password;
+			// 	var selections = JSON.parse(localStorage.getItem("newSelections")) || [];
+			// 	var connections = captureData.connections;
+			// 	var metadata = {
+			// 		title: captureData.title,
+			// 		description: captureData.description,
+			// 		date: captureData.date,
+			// 		url: captureData.url,
+			// 		pageDate: captureData.pageDate,
+			// 	};
+			// 	var quality = captureData.quality;
+			// 	console.log("quality================",quality);
+			// 	var maxWidth = window.screen.width; // Define the maximum width for the uploaded image
 
-			var formData = new FormData();
-			formData.append("selections", JSON.stringify(selections));
-			formData.append("connections", JSON.stringify(connections));
-			formData.append("metadata", JSON.stringify(metadata));
-			formData.append("capture", dataURItoBlob(resizedImageData), "image.jpg");
+			// 	// Create a new temporary canvas for resizing
+			// 	var tempCanvas = document.createElement("canvas");
+			// 	var tempContext = tempCanvas.getContext("2d");
 
-			xhr.open("POST", `${API_URL}/ext/upload`);
-			xhr.setRequestHeader("Authorization", "bearer " + res.token);
-			xhr.send(formData)
-		}
-	})
-}
+			// 	// Calculate the resized dimensions
+			// 	var scaleFactor = maxWidth / canvas.width;
+			// 	var resizedWidth = maxWidth;
+			// 	var resizedHeight = Math.floor(canvas.height * scaleFactor);
+
+			// 	// Set the temporary canvas dimensions
+			// 	tempCanvas.width = resizedWidth;
+			// 	tempCanvas.height = resizedHeight;
+			// 	console.info("canvas======",canvas);
+			// 	console.log("tempCanvas=========",tempCanvas);
+			// 	// Draw the resized image onto the temporary canvas
+			// 	tempContext.drawImage(canvas, 0, 0, resizedWidth, resizedHeight);
+			// 	// console.log("quality", tempCanvas.toDataURL("image/jpeg", quality));
+			// 	// Get the resized image data from the temporary canvas
+			// 	var resizedImageData = canvas.toDataURL("image/jpeg", 200);
+			// 	console.log("resizedImageData", resizedImageData);
+			// 	console.log("resizedImageData",dataURItoBlob(resizedImageData));
+			// 	var formData = new FormData();
+			// 	formData.append("selections", JSON.stringify(selections));
+			// 	formData.append("connections", JSON.stringify(connections));
+			// 	formData.append("metadata", JSON.stringify(metadata));
+			// 	formData.append("capture", dataURItoBlob(resizedImageData), "image.jpg");
+			// 	xhr.open("POST", `${API_URL}/ext/upload`);
+			// 	xhr.setRequestHeader("Authorization", "bearer " + res.token);
+			// 	console.log("!!!!!!!!!!!!!!!!!",formData);
+			// 	xhr.send(formData)
+			// }
+
+			if (captureData) {
+				captureData = JSON.parse(captureData);
+			
+				var selections = JSON.parse(localStorage.getItem("newSelections")) || [];
+				var connections = captureData.connections;
+				var metadata = {
+					title: captureData.title,
+					description: captureData.description,
+					date: captureData.date,
+					url: captureData.url,
+					pageDate: captureData.pageDate,
+				};
+				var quality = captureData.quality;
+				// Get the canvas image data without resizing
+				var canvasImageData = canvas.toDataURL("image/png", quality / 100);
+			
+				var formData = new FormData();
+				formData.append("selections", JSON.stringify(selections));
+				formData.append("connections", JSON.stringify(connections));
+				formData.append("metadata", JSON.stringify(metadata));
+				formData.append("capture", dataURItoBlob(canvasImageData), "image.jpg");
+			
+				xhr.open("POST", `${API_URL}/ext/upload`);
+				xhr.setRequestHeader("Authorization", "bearer " + res.token);
+				xhr.send(formData);
+			}
+			
+		})
+	}
 
 /******** */
 
@@ -458,7 +490,9 @@ function dataURItoBlob(dataURI) {
 	// Convert base64 data URI to a Blob
 	var byteString = atob(dataURI.split(",")[1]);
 	var mimeString = dataURI.split(",")[0].split(":")[1].split(";")[0];
+	console.log("mimeString", mimeString, "byteString.length", byteString.length);
 	var ab = new ArrayBuffer(byteString.length);
+	console.log("ab===============", ab);
 	var ia = new Uint8Array(ab);
 	for (var i = 0; i < byteString.length; i++) {
 		ia[i] = byteString.charCodeAt(i);

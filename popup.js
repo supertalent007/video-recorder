@@ -7,13 +7,15 @@ const rgb2hex = (rgb) => `#${rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/).slice
 var quality = 90;
 var selections;
 
-const API_URL = "http://alpha.yourarchiv.com/api";
-const WEBSITE_URL = "http://alpha.yourarchiv.com";
+// const API_URL = "http://alpha.yourarchiv.com/api";
+// const WEBSITE_URL = "http://alpha.yourarchiv.com";
+// const WEBSITE_URL = "https://yourarchiv.com";
+// const WEBSITE_URL = "http://localhost:3000/all#";
+// const API_URL = "http://127.0.0.1:5200/api";
+const API_URL = "https://yourarchiv.com/api";
+const WEBSITE_URL = "https://yourarchiv.com";
 
-// const API_URL = "http://yourarchiv.com/api";
-// const WEBSITE_URL = "http://yourarchiv.com";
-
-// const API_URL = "http://localhost:5000/api";
+// const API_URL = "http://localhost:5200/api";
 // const WEBSITE_URL = "http://localhost:3000";
 
 var finalScreenshot = null;
@@ -58,7 +60,8 @@ document.getElementById("txtAudioDescription").addEventListener("input", TextAud
 // document.getElementById("btnMark").addEventListener("click", Mark);
 document.getElementById("btnUploadAudio").addEventListener("click", UploadAudio);
 document.addEventListener('DOMContentLoaded', function () {
-	setTimeout(OnLoad, 0);
+	OnLoad()
+	// setTimeout(OnLoad, 0);
 });
 
 document.getElementById("tabAudio").addEventListener("click", () => SelectTab("audio"))
@@ -69,6 +72,11 @@ document.getElementById("options").addEventListener("click", () => { chrome.runt
 
 const progressBar = document.getElementById('progress-bar-inner');
 const cancelButton = document.getElementById('cancel-button');
+var appendHours = document.getElementById("hours");
+var appendMinutes = document.getElementById("minutes");
+var appendSeconds = document.getElementById("seconds");
+const startButton = document.getElementById('btnRecordStart');
+const stopButton = document.getElementById('btnRecordStop');
 
 cancelButton.addEventListener('click', cancelUpload)
 
@@ -109,13 +117,11 @@ async function OnLoad() {
 	durations = await SessionData?.get("durations") ?? [];
 	savedRecordings = (await chrome.storage.session?.get()).recordings;
 
-	console.log("savedRecordings: ", savedRecordings ? JSON.parse(savedRecordings) : null);
-
 	if (savedRecordings?.length > 0) {
 		var description = await SessionData?.get("recordingDescription");
 		durations = await SessionData?.get("durations");
 
-		if (description) 
+		if (description)
 			$("#txtAudioDescription").val(description);
 
 		savedRecordings = JSON.parse(savedRecordings);
@@ -158,7 +164,7 @@ async function OnLoad() {
 			$("#btnUploadAudio").removeClass("disabled");
 		});
 	}
-	
+
 	var token = await GetStorage("token");
 	$.ajax({
 		type: "GET",
@@ -207,7 +213,7 @@ async function OnLoad() {
 				$("#btnCapture").text("Url exists");
 			}
 		},
-		error: function (error) {}
+		error: function (error) { }
 	});
 
 	var meta = await GetMeta();
@@ -363,10 +369,10 @@ function AudioPanel() {
 
 var btnrecording = document.getElementById('btnrecording')
 
-btnrecording.addEventListener('click', async function () {
-	const url = `/videorec.html?login=${btoa(username + ":" + password)}&user=${username}`;
-	window.open(url, 'popup', 'width=800,height=600,scrollbars=yes,resizable=yes')
-})
+// btnrecording.addEventListener('click', async function () {
+// 	const url = `/videorec.html?login=${btoa(username + ":" + password)}&user=${username}`;
+// 	window.open(url, 'popup', 'width=800,height=600,scrollbars=yes,resizable=yes')
+// })
 
 
 const addBgColor = (tab) => {
@@ -398,26 +404,18 @@ async function SelectTab(tab) {
 
 	$("#lbl-username").text(`👤 ${localStorage.getItem('loggedUsername')}`)
 	if (tab === "audio") {
-		$("#tabAudio").addClass("active")
-		$("#tabText").removeClass("active")
-
-		// $("#tabsPanel").css("background-image", "linear-gradient(-135deg, #333 70%, #bbb 70%)");
-		// $("#tabSelected").attr("style", "background-image: linear-gradient(-135deg, #FFC90E 70%, #333 70%) !important");
-
-
+		$("#tabAudio").addClass("active");
+		$("#tabText").removeClass("active");
 		$("#tabAudio").css("color", "#fff");
 		$("#tabText").css("color", "black");
 		$("#audioPanel").show();
 		$("#articlePanel").hide();
+		$("#videoPanel").hide();
 		$("#description").hide();
 
 	} else if (tab === "text") {
-		// $("#tabsPanel").css("background-image", "linear-gradient(-135deg, #FFC90E 70%, #bbb 70%)");
-		// $("#tabSelected").attr("style", "background-image: linear-gradient(-135deg, #333 70%, #FFC90E 70%) !important");
-
-		$("#tabText").addClass("active")
-		$("#tabAudio").removeClass("active")
-
+		$("#tabText").addClass("active");
+		$("#tabAudio").removeClass("active");
 
 		$("#tabText").css("color", "#fff");
 		$("#btnrecording").css("color", "black");
@@ -425,33 +423,33 @@ async function SelectTab(tab) {
 
 		$("#articlePanel").show();
 		$("#audioPanel").hide();
+		$("#videoPanel").hide();
 		$("#description").show();
-	} else if (tab === "video") {
-		// $("#tabsPanel").css("background-image", "linear-gradient(-135deg, #FFC90E 70%, #bbb 70%)");
-		// $("#tabSelected").attr("style", "background-image: linear-gradient(-135deg, #333 70%, #FFC90E 70%) !important");
-
-		$("#btnrecording").addClass("active")
-		$("#tabAudio").removeClass("active")
-		$("#tabText").removeClass("active")
-
+	} else {
+		$("#btnrecording").css("color", "#fff");
 		$("#tabText").css("color", "black");
 		$("#tabAudio").css("color", "black");
-		$("#btnrecording").css("color", "#fff");
 
 		$("#articlePanel").hide();
 		$("#audioPanel").hide();
-		$("#description").hide();
+		$("#videoPanel").show();
+		$("#description").show();
+
+		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+			const activeTab = tabs[0];
+			chrome.scripting.executeScript({
+				target: { tabId: activeTab.id },
+				files: ['contentScript.js']
+			});
+		});
 	}
 
-	// await SessionData.set("tab", tab) 
 	localStorage.setItem('tab', tab)
 	$("#bgPanel").hide();
 }
 
 
 let x
-// var recordTimer;
-// var recordTime = 0
 const MIN_BLOB_SIZE = 5000000;
 var partSize = 0;
 var parts = [];
@@ -986,13 +984,13 @@ async function GetStorage(key) {
 async function SetStorage(key, value) {
 	var data = {};
 	data[key] = value;
-	await chrome?.storage?.local?.set(data, function () {});
+	await chrome?.storage?.local?.set(data, function () { });
 }
 
 async function ClearStorage(key) {
 	var data = {};
 	data[key] = null;
-	await chrome?.storage?.local?.set(data, function () {});
+	await chrome?.storage?.local?.set(data, function () { });
 }
 
 var SessionData = (function () {
@@ -1269,7 +1267,7 @@ async function Capture() {
 		alert(e);
 		return null;
 	}
-	return JSON.stringify(res);
+	return;
 }
 
 async function Cancel() {
@@ -1308,13 +1306,15 @@ async function SetColor(color, id) {
 	await p;
 }
 
-function Website() {
+async function Website() {
 	var data = btoa(JSON.stringify({
 		username,
 		password
 	}));
+	const token = await GetStorage("token");
+	console.log('token', token);
 	// window.open(`http://beta.saveyournews.com?access=${data}`);
-	window.open(`${WEBSITE_URL}`);
+	window.open(`${WEBSITE_URL}/new/login?verifylogin=${token}`);
 
 }
 
@@ -1767,8 +1767,8 @@ window.Capture = (function () {
 	function capture(data, screenshots, sendResponse, splitnotifier) {
 		chrome.tabs.captureVisibleTab(
 			null, {
-				format: 'png'
-			},
+			format: 'png'
+		},
 			function (dataURI) {
 				if (dataURI) {
 
@@ -1834,8 +1834,8 @@ window.Capture = (function () {
 		// because Chrome won't generate an image otherwise.
 		//
 		var badSize = (totalHeight > MAX_PRIMARY_DIMENSION ||
-				totalWidth > MAX_PRIMARY_DIMENSION ||
-				totalHeight * totalWidth > MAX_AREA),
+			totalWidth > MAX_PRIMARY_DIMENSION ||
+			totalHeight * totalWidth > MAX_AREA),
 			biggerWidth = totalWidth > totalHeight,
 			maxWidth = (!badSize ? totalWidth :
 				(biggerWidth ? MAX_PRIMARY_DIMENSION : MAX_SECONDARY_DIMENSION)),
@@ -1967,7 +1967,7 @@ window.Capture = (function () {
 			screenshots = [],
 			timeout = 3000,
 			timedOut = false,
-			noop = function () {};
+			noop = function () { };
 
 		callback = callback || noop;
 		errback = errback || noop;
@@ -2048,283 +2048,342 @@ window.Capture = (function () {
 
 })();
 
+function updateBadge(text) {
+	chrome.action.setBadgeText({ text });
+	if (text === '') {
+		chrome.action.setBadgeBackgroundColor({ color: '#00000000' }); // Transparent color
+	} else {
+		chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+	}
+}
+
+document.getElementById('fullScreenBtn').addEventListener('click', () => {
+	var Interval;
+	var millisec = 0;
+	var seconds = 0;
+	var minutes = 0;
+	var hours = 0;
+
+	chrome.tabCapture.capture({ audio: false, video: true }, function (stream) {
+		if (!stream) {
+			console.error('Error capturing tab:', chrome.runtime.lastError.message);
+			return;
+		}
+		// onMediaSuccess(stream);
+		chrome.runtime.sendMessage({ action: 'startRecording', streamId: stream.id });
+
+	});
+
+	function notifyContentScript(action) {
+		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+			chrome.tabs.sendMessage(tabs[0].id, { action });
+		});
+	}
+
+	function onMediaSuccess(stream) {
+		var mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+
+		$('#btnRecordStart').removeClass('disabled');
+
+		mediaRecorder.ondataavailable = function (event) {
+			if (event.data.size > 0) {
+				const blob = event.data;
+				document.body.insertAdjacentHTML('beforeend', `<button id="uploadButton" style="min-width: max-content;">Upload Recording</button><br>`);
+
+				const uploadButton = document.getElementById('uploadButton');
+				uploadButton.addEventListener('click', () => uploadVideo(blob));
+			}
+		};
+
+		startButton.addEventListener('click', () => {
+			mediaRecorder.start();
+			updateBadge('REC');
+
+			clearInterval(Interval);
+			Interval = setInterval(startTimer, 10);
+
+			$('#btnRecordStart').addClass('disabled');
+			$('#btnRecordStop').removeClass('disabled');
+		});
+
+		stopButton.addEventListener('click', () => {
+			mediaRecorder.stop();
+			updateBadge('');
+
+			clearInterval(Interval);
+
+			$('#btnRecordStop').addClass('disabled');
+		});
+	}
+
+	function startTimer() {
+		millisec++;
+
+		if (millisec > 99) {
+			seconds++;
+			millisec = 0;
+		}
+
+		hours = Math.floor(seconds / 3600);
+		minutes = Math.floor(seconds % 3600 / 60);
+
+		appendSeconds.innerHTML = seconds % 60 > 9 ? seconds % 60 : '0' + seconds % 60;
+		appendMinutes.innerHTML = minutes > 9 ? minutes : '0' + minutes;
+		appendHours.innerHTML = hours > 9 ? hours : '0' + hours;
+
+	}
+
+	async function uploadVideo(blob) {
+		const url = `${API_URL}/ext/video`;
+		const formData = new FormData();
+		formData.append('title', document.getElementById('title').value);
+		formData.append('description', document.getElementById('description').value);
+		formData.append('date', new Date().toISOString().slice(0, 16));
+		const filename = `video_${Math.floor(Math.random() * 100000000)}.mp4`;
+		formData.append('video', blob, filename);
+		const token = await GetStorageToken("token");
+
+		const xhr = new XMLHttpRequest();
+
+		xhr.upload.addEventListener('progress', (event) => {
+			if (event.lengthComputable) {
+				const percentComplete = (event.loaded / event.total) * 100;
+				progressBar.style.width = percentComplete + '%';
+
+				if (percentComplete === 100) {
+					setTimeout(() => {
+						progressBar.style.display = 'none';
+						cancelButton.style.display = 'none';
+						progressBars.style.display = "none";
+					}, 500)
+				}
+			}
+		});
+
+		cancelButton.addEventListener('click', () => {
+			xhr.abort();
+		});
+
+		xhr.open('POST', url);
+		xhr.setRequestHeader('Authorization', 'bearer ' + token);
+
+		xhr.onload = () => {
+			if (xhr.status === 200) {
+				alert('Video uploaded successfully');
+			} else {
+				const x = JSON.parse(xhr.response);
+				alert(x.error.message[0]);
+			}
+		};
+
+		xhr.send(formData);
+	}
+});
+
+document.getElementById('selectSectionBtn').addEventListener('click', async () => {
+	var Interval;
+	var millisec = 0;
+	var seconds = 0;
+	var minutes = 0;
+	var hours = 0;
+
+	try {
+		chrome.tabCapture.capture({ audio: false, video: true }, function (stream) {
+			if (!stream) {
+				console.error('Error capturing tab:', chrome.runtime.lastError.message);
+				return;
+			}
+
+			const videoContainer = document.getElementById('videoContainer');
+
+			const video = document.createElement('video');
+			video.srcObject = stream;
+			videoContainer.appendChild(video);
+
+			video.onloadedmetadata = () => {
+				video.play();
+
+				const overlayCanvas = document.createElement('canvas');
+				overlayCanvas.id = 'overlay';
+				overlayCanvas.width = video.videoWidth;
+				overlayCanvas.height = video.videoHeight;
+				videoContainer.appendChild(overlayCanvas);
+
+				const overlayCtx = overlayCanvas.getContext('2d');
+				let startX, startY, endX, endY, isDrawing = false;
+
+				const scaleX = video.videoWidth / video.clientWidth;
+				const scaleY = video.videoHeight / video.clientHeight;
+
+				overlayCanvas.addEventListener('mousedown', (e) => {
+					startX = e.offsetX * scaleX;
+					startY = e.offsetY * scaleY;
+					isDrawing = true;
+				});
+
+				overlayCanvas.addEventListener('mousemove', (e) => {
+					if (!isDrawing) return;
+					endX = e.offsetX * scaleX;
+					endY = e.offsetY * scaleY;
+					overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+					overlayCtx.strokeRect(startX / scaleX, startY / scaleY, (endX - startX) / scaleX, (endY - startY) / scaleY);
+				});
+
+				overlayCanvas.addEventListener('mouseup', () => {
+					isDrawing = false;
+					const cropArea = {
+						x: Math.min(startX, endX),
+						y: Math.min(startY, endY),
+						width: Math.abs(endX - startX),
+						height: Math.abs(endY - startY)
+					};
+					setupCroppedViewAndStartRecording(video, cropArea);
+					videoContainer.removeChild(overlayCanvas);
+
+				});
+			};
+
+			function setupCroppedViewAndStartRecording(video, cropArea) {
+				const cropCanvas = document.createElement('canvas');
+				cropCanvas.id = 'cropCanvas';
+				cropCanvas.width = cropArea.width;
+				cropCanvas.height = cropArea.height;
+				videoContainer.appendChild(cropCanvas);
+
+				const ctx = cropCanvas.getContext('2d');
+				video.style.display = 'none';
+				cropCanvas.style.display = 'none';
+
+				const drawFrame = () => {
+					ctx.drawImage(video, cropArea.x, cropArea.y, cropArea.width, cropArea.height, 0, 0, cropCanvas.width, cropCanvas.height);
+					requestAnimationFrame(drawFrame);
+				};
+
+				drawFrame();
+
+				startRecording(cropCanvas);
+			}
+
+			async function startRecording(canvas) {
+				const mediaRecorder = new MediaRecorder(canvas.captureStream(), {
+					mimeType: 'video/webm;codecs=vp9'
+				});
+
+				$('#btnRecordStart').removeClass('disabled');
+
+				mediaRecorder.ondataavailable = function (event) {
+					if (event.data.size > 0) {
+						const blob = event.data;
+						document.body.insertAdjacentHTML('beforeend', `<button id="uploadButton" style="min-width: max-content;">Upload Recording</button><br>`);
+
+						const uploadButton = document.getElementById('uploadButton');
+						uploadButton.addEventListener('click', () => uploadVideo(blob));
+					}
+				};
+
+				startButton.addEventListener('click', () => {
+					mediaRecorder.start();
+					updateBadge('REC');
+
+					clearInterval(Interval);
+					Interval = setInterval(startTimer, 10);
+
+					$('#btnRecordStart').addClass('disabled');
+					$('#btnRecordStop').removeClass('disabled');
+				});
+
+				stopButton.addEventListener('click', () => {
+					mediaRecorder.stop();
+					updateBadge('');
+
+					clearInterval(Interval);
+
+					$('#btnRecordStop').addClass('disabled');
+				});
+			}
+
+			function startTimer() {
+				millisec++;
+
+				if (millisec > 99) {
+					seconds++;
+					millisec = 0;
+				}
+
+				hours = Math.floor(seconds / 3600);
+				minutes = Math.floor(seconds % 3600 / 60);
+
+				appendSeconds.innerHTML = seconds % 60 > 9 ? seconds % 60 : '0' + seconds % 60;
+				appendMinutes.innerHTML = minutes > 9 ? minutes : '0' + minutes;
+				appendHours.innerHTML = hours > 9 ? hours : '0' + hours;
+
+			}
+
+			async function uploadVideo(blob) {
+				const url = `${API_URL}/ext/video`;
+				const formData = new FormData();
+				formData.append('title', document.getElementById('title').value);
+				formData.append('description', document.getElementById('description').value);
+				formData.append('date', new Date().toISOString().slice(0, 16));
+				const filename = `video_${Math.floor(Math.random() * 100000000)}.mp4`;
+				formData.append('video', blob, filename);
+				const token = await GetStorageToken("token");
+
+				const xhr = new XMLHttpRequest();
+
+				xhr.upload.addEventListener('progress', (event) => {
+					if (event.lengthComputable) {
+						const percentComplete = (event.loaded / event.total) * 100;
+						progressBar.style.width = percentComplete + '%';
+
+						if (percentComplete === 100) {
+							setTimeout(() => {
+								progressBar.style.display = 'none';
+								cancelButton.style.display = 'none';
+								progressBars.style.display = "none";
+							}, 500)
+						}
+					}
+				});
+
+				cancelButton.addEventListener('click', () => {
+					xhr.abort();
+				});
+
+				xhr.open('POST', url);
+				xhr.setRequestHeader('Authorization', 'bearer ' + token);
+
+				xhr.onload = () => {
+					if (xhr.status === 200) {
+						alert('Video uploaded successfully');
+					} else {
+						const x = JSON.parse(xhr.response);
+						alert(x.error.message[0]);
+					}
+				};
+
+				xhr.send(formData);
+			}
+
+		});
+		// const stream = await navigator.mediaDevices.getDisplayMedia({
+		// 	video: { cursor: 'always', displaySurface: "window" },
+		// 	audio: true,
+		// });
 
 
-// function concatenateBase64Audio(audioData1, audioData2) {
-// 	// Decode Base64 strings
-// 	const decodedData1 = atob(audioData1);
-// 	const decodedData2 = atob(audioData2);
 
-// 	// Convert to ArrayBuffer
-// 	const arrayBuffer1 = new ArrayBuffer(decodedData1.length);
-// 	const arrayBuffer2 = new ArrayBuffer(decodedData2.length);
+	} catch (err) {
+		console.error('Failed to start recording:', err);
+		alert('Failed to start recording: ' + err.message);
+	}
+})
 
-// 	const view1 = new Uint8Array(arrayBuffer1);
-// 	const view2 = new Uint8Array(arrayBuffer2);
-
-// 	for (let i = 0; i < decodedData1.length; i++) {
-// 		view1[i] = decodedData1.charCodeAt(i);
-// 	}
-
-// 	for (let i = 0; i < decodedData2.length; i++) {
-// 		view2[i] = decodedData2.charCodeAt(i);
-// 	}
-
-
-// 	const mergedArray = new Uint8Array(arrayBuffer1.byteLength + arrayBuffer2.byteLength);
-// 	mergedArray.set(view1, 0);
-// 	mergedArray.set(view2, arrayBuffer1.byteLength);
-
-
-// 	const mergedBase64 = btoa(String.fromCharCode.apply(null, mergedArray));
-
-// 	return mergedBase64;
-// }
-
-// const recorderonstopnull = async () => {
-// 	console.log(stashrecordings);
-// 	if (stashrecordings?.length === 0) return;
-
-// 	let whole_recordings = stashrecordings[0];
-// 	whole_recordings = whole_recordings.replace("data:application/octet-stream;", "data:audio/wav;");
-// 	for (let i = 1; i < stashrecordings?.length; i++) {
-// 		whole_recordings = await mergeBase64Audio(whole_recordings, stashrecordings[i]);
-// 	}
-// 	// base64 = await mergeBase64Audio(whole_recordings, base64)
-// 	// base64 = base64.replace("data:application/octet-stream;", "data:audio/wav;");
-
-// 	base64 = whole_recordings;
-
-// 	recordings.push(base64);
-// 	await SessionData?.set("recordings", recordings);
-// 	await SessionData?.set("durations", durations);
-
-// 	stashrecordings = [];
-// 	await SessionData?.set("stashrecordings", stashrecordings);
-
-// 	var index = recordings.length;
-// 	duration = durations[index - 1] || 0;
-// 	// Calculate minutes and seconds
-// 	// var duration = await SessionData?.get('duration');
-// 	var minutes = Math.floor(duration / 60);
-// 	var seconds = duration % 60;
-
-// 	// Format the output as mm:ss
-// 	var formattedDuration = (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-
-// 	// let c = localStorage.getItem("durations");
-
-// 	var comment = comments[comments.length - 1];
-
-// 	function breakTextIntoLines(text, maxLength) {
-// 		let lines = '';
-// 		for (let i = 0; i < text.length; i += maxLength) {
-// 			lines += text.substr(i, maxLength);
-// 		}
-// 		return lines;
-// 	}
-
-// 	// Maximum length for each line of the comment text
-// 	const maxCommentLineLength = 40;
-
-// 	// Break comment text into lines
-// 	const formattedComment = breakTextIntoLines(comment, maxCommentLineLength);
-
-
-// 	// ${c && c ? c : formattedDuration}
-
-// 	var audio = $(`
-// 			<option style="text-wrap: wrap;">
-// 				${$("#slcRecordings option")?.length + 1}&nbsp;&nbsp;(${formattedDuration})  
-// 				: ${formattedComment}
-// 				<div class="comment-text" style="display: none;"></div>
-// 			</option>`);
-
-// 	$("#slcRecordings")?.append(audio);
-// 	$("#btnUploadAudio").removeClass("disabled");
-
-// 	audioData = [];
-// 	duration = 0;
-// };
-
-////////////////////////////////////////
-// ///////////
-
-// async function mergeBase64Audio(base64Audio1, base64Audio2) {
-// 	try {
-// 		// Convert base64 strings to Blobs
-// 		const blob1 = await base64ToBlob(base64Audio1);
-// 		const blob2 = await base64ToBlob(base64Audio2);
-
-// 		// Merge the Blobs
-// 		// const mergedBlob = new Blob([blob1, blob2], { type: 'audio/wav' });
-
-// 		const mergedBlob = await concatenateAudioBlobs(blob1, blob2);
-// 		// Convert the merged Blob back to base64
-// 		const mergedBase64 = await blobToBase64(mergedBlob);
-// 		return mergedBase64;
-// 	} catch (error) {
-// 		console.error('Error merging base64 audio:', error);
-// 		throw error;
-// 	}
-// }
-
-// // Function to convert base64 to Blob
-// function base64ToBlob(base64) {
-// 	const byteCharacters = atob(base64.split(',')[1]);
-// 	const byteNumbers = new Array(byteCharacters.length);
-
-// 	for (let i = 0; i < byteCharacters.length; i++) {
-// 		byteNumbers[i] = byteCharacters.charCodeAt(i);
-// 	}
-
-// 	const byteArray = new Uint8Array(byteNumbers);
-// 	return new Blob([byteArray]);
-// }
-
-
-// // This function concatenates two audio blobs
-// async function concatenateAudioBlobs(blob1, blob2) {
-// 	try {
-// 		// Create an audio context
-// 		const audioContext = new(window.AudioContext || window.webkitAudioContext)();
-// 		// Decode audio data from the first blob
-// 		const buffer1 = await decodeAudioBlob(blob1, audioContext);
-// 		// Decode audio data from the second blob
-// 		const buffer2 = await decodeAudioBlob(blob2, audioContext);
-// 		// Log the decoded audio data
-// 		console.log(buffer1, buffer2);
-// 		// Concatenate the audio buffers
-// 		const concatenatedBuffer = concatenateAudioBuffers(buffer1, buffer2, audioContext);
-// 		// Log the concatenated buffer
-// 		console.log(concatenatedBuffer);
-// 		// Encode the concatenated buffer back to a blob
-// 		const concatenatedBlob = await encodeAudioBufferToBlob(concatenatedBuffer, audioContext);
-// 		// Close the audio context
-// 		audioContext.close();
-// 		// Return the concatenated blob
-// 		return concatenatedBlob;
-// 	} catch (error) {
-// 		// Log and rethrow any errors
-// 		console.error('Error concatenating audio blobs:', error);
-// 		throw error;
-// 	}
-// }
-
-// function decodeAudioBlob(blob, audioContext) {
-// 	return new Promise((resolve, reject) => {
-// 		const reader = new FileReader();
-
-// 		reader.onloadend = async function () {
-// 			try {
-// 				const arrayBuffer = reader.result;
-// 				const buffer = await audioContext.decodeAudioData(arrayBuffer);
-// 				resolve(buffer);
-// 			} catch (decodeError) {
-// 				reject(decodeError);
-// 			}
-// 		};
-
-// 		reader.readAsArrayBuffer(blob);
-// 	});
-// }
-
-// function concatenateAudioBuffers(buffer1, buffer2, audioContext) {
-// 	const numberOfChannels = Math.max(buffer1.numberOfChannels, buffer2.numberOfChannels);
-// 	const length = buffer1.length + buffer2.length;
-
-// 	const concatenatedBuffer = audioContext.createBuffer(numberOfChannels, length, buffer1.sampleRate);
-
-// 	for (let channel = 0; channel < numberOfChannels; channel++) {
-// 		const channelData = concatenatedBuffer.getChannelData(channel);
-// 		channelData.set(buffer1.getChannelData(channel), 0);
-// 		channelData.set(buffer2.getChannelData(channel), buffer1.length);
-// 	}
-
-// 	return concatenatedBuffer;
-// }
-
-// function encodeAudioBufferToBlob(audioBuffer, audioContext) {
-// 	return new Promise((resolve) => {
-// 		const numberOfChannels = audioBuffer.numberOfChannels;
-// 		const sampleRate = audioBuffer.sampleRate;
-// 		const length = audioBuffer.length;
-// 		const interleaved = new Float32Array(length * numberOfChannels);
-
-// 		for (let channel = 0; channel < numberOfChannels; channel++) {
-// 			const channelData = audioBuffer.getChannelData(channel);
-// 			for (let i = 0; i < length; i++) {
-// 				interleaved[i * numberOfChannels + channel] = channelData[i];
-// 			}
-// 		}
-
-// 		const wavData = encodeWAV(interleaved, numberOfChannels, sampleRate);
-// 		const blob = new Blob([new Uint8Array(wavData)], {
-// 			type: 'audio/wav'
-// 		});
-
-// 		resolve(blob);
-// 	});
-// }
-
-// function encodeWAV(samples, numChannels, sampleRate) {
-// 	const buffer = new ArrayBuffer(44 + samples.length * 2);
-// 	const view = new DataView(buffer);
-
-// 	writeString(view, 0, 'RIFF');
-// 	view.setUint32(4, 36 + samples.length * 2, true);
-// 	writeString(view, 8, 'WAVE');
-// 	writeString(view, 12, 'fmt ');
-// 	view.setUint32(16, 16, true);
-// 	view.setUint16(20, 1, true);
-// 	view.setUint16(22, numChannels, true);
-// 	view.setUint32(24, sampleRate, true);
-// 	view.setUint32(28, sampleRate * numChannels * 2, true);
-// 	view.setUint16(32, numChannels * 2, true);
-// 	view.setUint16(34, 16, true);
-// 	writeString(view, 36, 'data');
-// 	view.setUint32(40, samples.length * 2, true);
-
-// 	floatTo16BitPCM(view, 44, samples);
-
-// 	return buffer;
-// }
-
-// function writeString(view, offset, string) {
-// 	for (let i = 0; i < string.length; i++) {
-// 		view.setUint8(offset + i, string.charCodeAt(i));
-// 	}
-// }
-
-// function floatTo16BitPCM(output, offset, input) {
-// 	for (let i = 0; i < input.length; i++, offset += 2) {
-// 		const sample = Math.max(-1, Math.min(1, input[i]));
-// 		output.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-// 	}
-// }
-
-// function createWriter(dataView) {
-// 	let pos = 0;
-
-// 	return {
-// 		string(val) {
-// 			for (let i = 0; i < val.length; i++) {
-// 				dataView.setUint8(pos++, val.charCodeAt(i));
-// 			}
-// 		},
-// 		uint16(val) {
-// 			dataView.setUint16(pos, val, true);
-// 			pos += 2;
-// 		},
-// 		uint32(val) {
-// 			dataView.setUint32(pos, val, true);
-// 			pos += 4;
-// 		},
-// 		pcm16s: function (value) {
-// 			value = Math.round(value * 32768);
-// 			value = Math.max(-32768, Math.min(value, 32767));
-// 			dataView.setInt16(pos, value, true);
-// 			pos += 2;
-// 		},
-// 	}
-// }
+async function GetStorageToken(key) {
+	var p = new Promise(function (resolve, reject) {
+		chrome.storage.local.get(key, function (x) {
+			resolve(x[key]);
+		})
+	});
+	return p;
+}

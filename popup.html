@@ -124,7 +124,8 @@
 
   <ul id="tabsPanel">
     <!-- <li id="tabSelected" class="tabSelected"></li> -->
-    <li id="btnrecording"  class="tabText" style="display: none;">VIDEO</li>
+    <!-- <li id="btnrecording" class="tabText" style="display: none;">VIDEO</li> -->
+    <li id="btnrecording" class="tabText">VIDEO</li>
     <li id="tabText" id="textTab" class="tabText">TEXT</li>
     <li id="tabAudio" id="audioTab" class="tabText">AUDIO</li>
   </ul>
@@ -134,13 +135,14 @@
   <div id="header-info">
     <ul>
       <div style="display: flex;">
-        <li><label id="lbl-username"></label></li>
+        <li style="padding: 0px;"><label id="lbl-username"></label></li>
         <button id="btnLogout" class="button">Logout</button>
       </div>
-      <li>
-        <label>Title:</label><input id="title" type="text" class="header" placeholder="Add title manually" />
+      <li style="padding: 0px;">
+        <label>Title:</label>
+        <input id="title" type="text" class="header" placeholder="Add title here" />
       </li>
-      <li style="margin-right: 165px;">
+      <li style="padding: 0px;">
         <!-- <label id="lbl-date">Date:</label> -->
         <input id="date" type="datetime-local" class="header" style="margin-left: 0px;" />
       </li>
@@ -173,12 +175,13 @@
     <div class="slider" id="toggleSlider">
       <div class="knob"></div>
     </div>
-    <div style="margin-top: -28px; margin-left: 30px;">
-      <label style="color: white; margin-top: -10px;" id = "qualityVisible">High Quality</label>
-      <label style="color: white; margin-left: 60px; margin-top: -10px;">Static capture:</label>
+    <div
+      style="display: flex; align-items: center; margin-left: 30px; margin-top: -20px; justify-content: space-around;">
+      <label style="color: white;" id="qualityVisible">High Quality</label>
+      <label style="color: white; margin-left: 60px;" for="static">Static capture:</label>
       <input id="static" type="checkbox" />
       <button id="btnCapture" class="button" style="width: fit-content; margin-left: 20px; float: right;
-                  margin-right: 20px; margin-bottom: -10px; background:#7e1010">
+                  margin-right: 20px; background:#7e1010">
         📸 Capture
       </button>
     </div>
@@ -237,15 +240,13 @@
         <button id="btnStop" class="btnMedia disabled">
           <img src="images/stop.png" />
         </button>
-        <br />
-        <br />
-
-        <button id="btnUploadAudio" class="disabled">Upload</button>
       </div>
+      <button id="btnUploadAudio" class="disabled">Upload</button>
     </div>
 
     <div id="uploading-message"
-      style="display: none; margin-left: 50px; margin-right: 50px; color: white; font-size:15px; height: 31px;">Uploading...
+      style="display: none; margin-left: 50px; margin-right: 50px; color: white; font-size:15px; height: 31px;">
+      Uploading...
     </div>
     <div style="display: flex; padding-right: 35px;">
       <div id="progress-bar">
@@ -257,13 +258,13 @@
       <div id="success-message" style="display: none; margin-left: 136px; color: white; font-size:15px;">Upload
         Successful!</div>
     </div>
-    
+
     <audio controls></audio>
     <textarea id="txtAudioDescription" type="text" placeholder="Description..."></textarea>
-    
+
     <div class="ctl-btns" style="text-align: right; padding-right: 10px; height: 45px; margin-top: -20px;">
-      <div style="margin-left: 10px;">
-        <button id="options" style="min-width: max-content;">Click for Settings</button>
+      <div style="margin-left: 15px;">
+        <button id="options" style="min-width: max-content;">🔑 Settings</button>
       </div>
       <div>
         <button id="editButton" class="disabled">📝</button>
@@ -271,18 +272,40 @@
       </div>
     </div>
     <div id="audioPanelControl">
-      <select id="slcRecordings" multiple style="height: 180px;"></select>
+      <select id="slcRecordings" multiple></select>
+    </div>
+  </div>
+
+  <div id="videoPanel">
+    <div id="videoRecordingButtons">
+      <button id="fullScreenBtn" style="min-width: max-content;">Full Screen</button>
+      <button id="selectSectionBtn" style="min-width: max-content;">Select Section</button>
+
+    </div>
+    <div id="recordingActionSection">
+      <p><span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span></p>
+      <div>
+        <button id="btnRecordStart" class="btnMedia disabled">
+          <img src="images/screen recorder.png" />
+        </button>
+        <button id="btnRecordStop" class="btnMedia disabled">
+          <img src="images/stop.png" style="width: 45%; height: 40%;" />
+        </button>
+      </div>
+    </div>
+    <div id="videoContainer">
     </div>
   </div>
 
   <div id="login">
-    <br />
-    <p>Username:</p>
-    <input type="text" id="txtUser" placeholder="Email" values="" />
-    <p>Password:</p>
-    <input type="password" id="txtPassword" placeholder="Password" value="" />
-    <br />
-
+    <div class="login-form">
+      <p>Name</p>
+      <input type="text" id="txtUser" placeholder="Email" values="" />
+    </div>
+    <div class="login-form">
+      <p>Password</p>
+      <input type="password" id="txtPassword" placeholder="Password" value="" />
+    </div>
     <button id="btnLogin" type="submit">Log in</button>
   </div>
 
@@ -300,8 +323,9 @@
     </button>
   </div>
 
-  <script src="popup.js"></script>
+  <script src="popup.js" defer></script>
   <script src="lib/lame.min.js"></script>
+  <script src="lib/media-stream-recorder.js"> </script>
 </body>
 
 </html>

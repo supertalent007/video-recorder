@@ -173,12 +173,12 @@ class Recorder {
 		});
 	}
 
-	onEncoderLoading(recorder, encoding) {}
-	onEncoderLoaded(recorder, encoding) {}
-	onTimeout(recorder) {}
-	onEncodingProgress(recorder, progress) {}
-	onEncodingCanceled(recorder) {}
-	onComplete(recorder, blob) {}
+	onEncoderLoading(recorder, encoding) { }
+	onEncoderLoaded(recorder, encoding) { }
+	onTimeout(recorder) { }
+	onEncodingProgress(recorder, progress) { }
+	onEncodingCanceled(recorder) { }
+	onComplete(recorder, blob) { }
 
 }
 
@@ -335,7 +335,7 @@ const audioCapture = (timeLimit, muteTab, format, quality, limitRemoved) => {
 		//removes the audio context and closes recorder to save memory
 		const closeStream = function (endTabId) {
 			chrome.runtime.onMessage.removeListener(onStopClick);
-			mediaRecorder.onTimeout = () => {};
+			mediaRecorder.onTimeout = () => { };
 			audioCtx.close();
 			liveStream.getAudioTracks()[0].stop();
 			sessionStorage.removeItem(endTabId);
@@ -386,9 +386,9 @@ chrome.runtime.onMessage.addListener(async (message) => {
 			}
 			audioCapture(time, options.muteTab, options.format, options.quality, options.limitRemoved);
 		}),
-		chrome.runtime.sendMessage({
-			type: "RECORD_STARTED"
-		});
+			chrome.runtime.sendMessage({
+				type: "RECORD_STARTED"
+			});
 	}
 
 	if (message.type === 'record_status') {
