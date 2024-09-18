@@ -1,4 +1,4 @@
-console.log("video.js loaded");
+const API_URL = "https://yourarchiv.com/api";
 
 var mediaRecorder;
 
@@ -23,18 +23,10 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 }
             };
 
-            mediaRecorder.onstop = function () {
+            mediaRecorder.onstop = async function () {
                 const blob = new Blob(chunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = 'recording.webm';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
 
-                chrome.runtime.sendMessage({ type: 'CLOSE_TAB' });
+                await uploadVideo(blob);
             };
 
             mediaRecorder.start();
@@ -48,3 +40,43 @@ chrome.runtime.onMessage.addListener(async (message) => {
         }
     }
 });
+
+async function uploadVideo(blob) {
+    const url = `${API_URL}/ext/video`;
+    const formData = new FormData();
+    formData.append('title', 'Full Screen Video');
+    formData.append('description', 'This is a full screen video');
+    formData.append('date', new Date().toISOString().slice(0, 16));
+    const filename = `video_${Math.floor(Math.random() * 100000000)}.webm`; // Using .webm extension
+    formData.append('video', blob, filename);
+    const token = await GetStorageToken("token");
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Authorization', 'bearer ' + token);
+
+    xhr.onload = () => {
+        if (xhr.status === 200) {
+            alert('Video uploaded successfully');
+            chrome.runtime.sendMessage({ type: 'CLOSE_TAB' });
+        } else {
+            const x = JSON.parse(xhr.response);
+            alert(x.error.message[0]);
+        }
+    };
+
+    xhr.onerror = () => {
+        alert('An error occurred during the upload.');
+    };
+
+    xhr.send(formData);
+}
+
+async function GetStorageToken(key) {
+    return new Promise((resolve, reject) => {
+        chrome.storage.local.get(key, (result) => {
+            resolve(result[key]);
+        });
+    });
+}

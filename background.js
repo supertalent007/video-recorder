@@ -45,11 +45,6 @@ chrome.runtime.onMessage.addListener(async message => {
   } else if (message.type === 'STOP_VIDEO_RECORDING') {
     console.log('Stop Video Recording!')
     chrome.runtime.sendMessage({ type: "STOP_RECORDING" });
-
-    // const optionTabId = await getStorage("optionTabId");
-    // if (optionTabId) {
-    //   chrome.tabs.remove(optionTabId);
-    // }
   } else if (message.type === 'CLOSE_TAB') {
     await removeOptionTab(optionTabId);
   }
