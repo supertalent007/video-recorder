@@ -1,5 +1,6 @@
 let getTimerTab = null;
 let recordStatus = 'INIT';  // 'RECORDING', 'PAUSED'
+let videoRecordStatus = 'INIT';
 
 chrome.runtime.onStartup.addListener(async () => {
   await chrome.storage.session.remove("optionTabId");
@@ -31,11 +32,42 @@ chrome.runtime.onMessage.addListener(async (e) => {
   );
 });
 
+chrome.runtime.onMessage.addListener(async message => {
+  const optionTabId = await getStorage("optionTabId");
+
+  if (videoRecordStatus === 'INIT' && message.type === "VIDEO_RECORD") {
+    recordStatus = 'RECORDING';
+    const s = await VE();
+    await setStorage("optionTabId", s.id);
+  }
+  if (message.type === 'START_VIDEO_RECORDING') {
+    await chrome.runtime.sendMessage({ type: "START_RECORDING" });
+  } else if (message.type === 'STOP_VIDEO_RECORDING') {
+    console.log('Stop Video Recording!')
+    chrome.runtime.sendMessage({ type: "STOP_RECORDING" });
+
+    // const optionTabId = await getStorage("optionTabId");
+    // if (optionTabId) {
+    //   chrome.tabs.remove(optionTabId);
+    // }
+  } else if (message.type === 'CLOSE_TAB') {
+    await removeOptionTab(optionTabId);
+  }
+});
+
 function E() {
   return chrome.tabs.create({
     pinned: true,
     active: false,
     url: `chrome-extension://${chrome.runtime.id}/content.html`
+  });
+}
+
+function VE() {
+  return chrome.tabs.create({
+    pinned: true,
+    active: false,
+    url: `chrome-extension://${chrome.runtime.id}/video.html`
   });
 }
 

@@ -435,13 +435,7 @@ async function SelectTab(tab) {
 		$("#videoPanel").show();
 		$("#description").show();
 
-		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-			const activeTab = tabs[0];
-			chrome.scripting.executeScript({
-				target: { tabId: activeTab.id },
-				files: ['contentScript.js']
-			});
-		});
+		chrome.runtime.sendMessage({ type: 'VIDEO_RECORD' });
 	}
 
 	localStorage.setItem('tab', tab)
@@ -2064,15 +2058,32 @@ document.getElementById('fullScreenBtn').addEventListener('click', () => {
 	var minutes = 0;
 	var hours = 0;
 
-	chrome.tabCapture.capture({ audio: false, video: true }, function (stream) {
-		if (!stream) {
-			console.error('Error capturing tab:', chrome.runtime.lastError.message);
-			return;
-		}
-		// onMediaSuccess(stream);
-		chrome.runtime.sendMessage({ action: 'startRecording', streamId: stream.id });
+	chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+		const activeTab = tabs[0];
+		await chrome.scripting.executeScript({
+			target: { tabId: activeTab.id },
+			files: ['contentScript.js']
+		});
 
+		chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartRecordingBtn' });
 	});
+
+	// chrome.tabCapture.capture({ audio: false, video: true }, function (stream) {
+	// 	if (!stream) {
+	// 		console.error('Error capturing tab:', chrome.runtime.lastError.message);
+	// 		return;
+	// 	}
+	// 	// onMediaSuccess(stream);
+	// 	chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+	// 		const activeTab = tabs[0];
+	// 		chrome.scripting.executeScript({
+	// 			target: { tabId: activeTab.id },
+	// 			files: ['contentScript.js']
+	// 		});
+	// 	});
+
+
+	// });
 
 	function notifyContentScript(action) {
 		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

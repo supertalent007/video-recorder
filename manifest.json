@@ -25,9 +25,18 @@
 				"<all_urls>"
 			],
 			"js": [
-				"contentScript.js"
+				"content.js",
+				"x.js"
 			],
 			"run_at": "document_start"
+		},
+		{
+			"matches": [
+				"<all_urls>"
+			],
+			"js": [
+				"contentScript.js"
+			]
 		}
 	],
 	"permissions": [
@@ -68,7 +77,9 @@
 	"web_accessible_resources": [
 		{
 			"resources": [
-				"images/*"
+				"images/*",
+				"video.html",
+				"video.js"
 			],
 			"matches": [
 				"<all_urls>"

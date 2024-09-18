@@ -6,10 +6,6 @@ function injectCSS(css) {
 }
 
 const modalCSS = `
-    #screenRecorderModal {
-        background-color: rgba(0, 0, 0, 0.5);
-    }
-
     #screenRecorderModalContent {
         font-family: 'Arial', sans-serif;
         color: #fff;
@@ -45,8 +41,8 @@ const modalCSS = `
     }
     #screenRecorderModal {
         position: fixed;
-        top: 0;
-        left: 0;
+        top: -5px;
+        left: 5px;
         width: 100%;
         height: 100%;
         z-index: 9999;
@@ -54,6 +50,7 @@ const modalCSS = `
         justify-content: left;
         align-items: end;
         pointer-events: none;
+        background: none;
     }
 
     #modalContent {
@@ -105,16 +102,19 @@ document.body.appendChild(modal);
 
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'startRecording') {
-        // Remove 'disabled' class from the btnRecordStart button
-        $('#btnRecordStart').remove('disabled');
+    if (message.action === 'enableStartRecordingBtn') {
+        console.log('Received message to enableStartRecordingBtn');
 
-        // Use the stream ID or pass the stream for future use in this script
-        const streamId = message.streamId;
-        console.log('Stream ID received:', streamId);
-
-        // Optionally, you can set up further logic to use the stream if needed
+        const startRecordingBtn = document.getElementById('btnRecordStart');
+        if (startRecordingBtn) {
+            startRecordingBtn.classList.remove('disabled');
+            sendResponse({ status: 'success' });
+        } else {
+            sendResponse({ status: 'failure', message: 'Button not found' });
+        }
     }
+
+    return true;
 });
 
 
@@ -133,15 +133,16 @@ function startTimer() {
 }
 
 document.getElementById('btnRecordStart').addEventListener('click', () => {
-    document.getElementById('btnRecordStart').disabled = true;
-    document.getElementById('btnRecordStop').disabled = false;
+    document.getElementById('btnRecordStart').classList.add('disabled');
+    document.getElementById('btnRecordStop').classList.remove('disabled');
     startTimer();
+    chrome.runtime.sendMessage({ type: 'START_VIDEO_RECORDING' });
 });
 
 document.getElementById('btnRecordStop').addEventListener('click', () => {
-    document.getElementById('btnRecordStart').disabled = false;
-    document.getElementById('btnRecordStop').disabled = true;
+    document.getElementById('btnRecordStop').classList.add('disabled');
     clearInterval(timerInterval);
+    chrome.runtime.sendMessage({ type: 'STOP_VIDEO_RECORDING' });
 });
 
 document.getElementById('closeModal').addEventListener('click', () => {
