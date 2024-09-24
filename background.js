@@ -1,6 +1,7 @@
 let getTimerTab = null;
-let recordStatus = 'INIT';  // 'RECORDING', 'PAUSED'
+let recordStatus = 'INIT';
 let videoRecordStatus = 'INIT';
+let windowId;
 
 chrome.runtime.onStartup.addListener(async () => {
   await chrome.storage.session.remove("optionTabId");
@@ -36,17 +37,44 @@ chrome.runtime.onMessage.addListener(async message => {
   const optionTabId = await getStorage("optionTabId");
 
   if (videoRecordStatus === 'INIT' && message.type === "VIDEO_RECORD") {
-    recordStatus = 'RECORDING';
+    videoRecordStatus = 'RECORDING';
     const s = await VE();
     await setStorage("optionTabId", s.id);
   }
   if (message.type === 'START_VIDEO_RECORDING') {
-    await chrome.runtime.sendMessage({ type: "START_RECORDING" });
+    chrome.runtime.sendMessage({ type: "START_RECORDING" });
+  } else if (message.type === 'PAUSE_VIDEO_RECORDING') {
+    chrome.runtime.sendMessage({ type: "PAUSE_RECORDING" });
+  } else if (message.type === 'RESUME_VIDEO_RECORDING') {
+    chrome.runtime.sendMessage({ type: "RESUME_RECORDING" });
   } else if (message.type === 'STOP_VIDEO_RECORDING') {
-    console.log('Stop Video Recording!')
     chrome.runtime.sendMessage({ type: "STOP_RECORDING" });
   } else if (message.type === 'CLOSE_TAB') {
-    await removeOptionTab(optionTabId);
+    removeOptionTab(optionTabId);
+
+    chrome.windows.remove(windowId, function () {
+      console.log(`Window with ID ${windowId} has been closed.`);
+    });
+  } else if (message.type === 'PREPARE_SECTION_VIDEO_RECORDING') {
+    chrome.runtime.sendMessage({
+      type: "PREPARE_SECTION_RECORDING",
+      sx: message.sx,
+      sy: message.sy,
+      sWidth: message.sWidth,
+      sHeight: message.sHeight,
+      dx: message.dx,
+      dy: message.dy,
+      dWidth: message.dWidth,
+      dHeight: message.dHeight
+    });
+  } else if (message.type === 'START_SECTION_VIDEO_RECORDING') {
+    chrome.runtime.sendMessage({ type: 'START_SECTION_RECORDING' });
+  } else if (message.type === 'STOP_SECTION_VIDEO_RECORDING') {
+    chrome.runtime.sendMessage({ type: 'STOP_SECTION_RECORDING' });
+  } else if (message.type === 'PAUSE_SECTION_VIDEO_RECORDING') {
+    chrome.runtime.sendMessage({ type: 'PAUSE_SECTION_RECORDING' });
+  } else if (message.type === 'RESUME_SECTION_VIDEO_RECORDING') {
+    chrome.runtime.sendMessage({ type: 'RESUME_SECTION_RECORDING' });
   }
 });
 
@@ -57,17 +85,56 @@ function E() {
     url: `chrome-extension://${chrome.runtime.id}/content.html`
   });
 }
-
 function VE() {
-  return chrome.tabs.create({
-    pinned: true,
-    active: false,
-    url: `chrome-extension://${chrome.runtime.id}/video.html`
+  return new Promise((resolve, reject) => {
+    chrome.windows.create({
+      type: 'normal',
+      focused: false
+    }, function (window) {
+      if (chrome.runtime.lastError) {
+        return reject(chrome.runtime.lastError);
+      }
+
+      console.log('New window created with ID:', window.id);
+      windowId = window.id;
+
+      chrome.windows.update(window.id, { state: 'minimized' }, function (updatedWindow) {
+        if (chrome.runtime.lastError) {
+          return reject(chrome.runtime.lastError);
+        }
+
+        console.log('Window minimized with ID:', updatedWindow.id);
+
+        chrome.tabs.create({
+          windowId: updatedWindow.id,
+          url: `chrome-extension://${chrome.runtime.id}/video.html`,
+          active: true
+        }, function (tab) {
+          if (chrome.runtime.lastError) {
+            return reject(chrome.runtime.lastError);
+          }
+
+          console.log('New tab created with ID:', tab.id);
+          resolve(tab.id);
+        });
+      });
+    });
   });
 }
 
+
+// function VE() {
+//   return chrome.tabs.create({
+//     pinned: true,
+//     active: false,
+//     url: `chrome-extension://${chrome.runtime.id}/video.html`
+//   });
+// }
+
+
 async function removeOptionTab(e) {
   recordStatus = 'INIT';
+  videoRecordStatus = 'INIT';
   clearInterval(getTimerTab);
   chrome.action.setBadgeText({
     text: ""

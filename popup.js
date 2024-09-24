@@ -2052,12 +2052,6 @@ function updateBadge(text) {
 }
 
 document.getElementById('fullScreenBtn').addEventListener('click', () => {
-	var Interval;
-	var millisec = 0;
-	var seconds = 0;
-	var minutes = 0;
-	var hours = 0;
-
 	chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
 		const activeTab = tabs[0];
 		await chrome.scripting.executeScript({
@@ -2067,328 +2061,268 @@ document.getElementById('fullScreenBtn').addEventListener('click', () => {
 
 		chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartRecordingBtn' });
 	});
-
-	// chrome.tabCapture.capture({ audio: false, video: true }, function (stream) {
-	// 	if (!stream) {
-	// 		console.error('Error capturing tab:', chrome.runtime.lastError.message);
-	// 		return;
-	// 	}
-	// 	// onMediaSuccess(stream);
-	// 	chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-	// 		const activeTab = tabs[0];
-	// 		chrome.scripting.executeScript({
-	// 			target: { tabId: activeTab.id },
-	// 			files: ['contentScript.js']
-	// 		});
-	// 	});
-
-
-	// });
-
-	function notifyContentScript(action) {
-		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-			chrome.tabs.sendMessage(tabs[0].id, { action });
-		});
-	}
-
-	function onMediaSuccess(stream) {
-		var mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
-
-		$('#btnRecordStart').removeClass('disabled');
-
-		mediaRecorder.ondataavailable = function (event) {
-			if (event.data.size > 0) {
-				const blob = event.data;
-				document.body.insertAdjacentHTML('beforeend', `<button id="uploadButton" style="min-width: max-content;">Upload Recording</button><br>`);
-
-				const uploadButton = document.getElementById('uploadButton');
-				uploadButton.addEventListener('click', () => uploadVideo(blob));
-			}
-		};
-
-		startButton.addEventListener('click', () => {
-			mediaRecorder.start();
-			updateBadge('REC');
-
-			clearInterval(Interval);
-			Interval = setInterval(startTimer, 10);
-
-			$('#btnRecordStart').addClass('disabled');
-			$('#btnRecordStop').removeClass('disabled');
-		});
-
-		stopButton.addEventListener('click', () => {
-			mediaRecorder.stop();
-			updateBadge('');
-
-			clearInterval(Interval);
-
-			$('#btnRecordStop').addClass('disabled');
-		});
-	}
-
-	function startTimer() {
-		millisec++;
-
-		if (millisec > 99) {
-			seconds++;
-			millisec = 0;
-		}
-
-		hours = Math.floor(seconds / 3600);
-		minutes = Math.floor(seconds % 3600 / 60);
-
-		appendSeconds.innerHTML = seconds % 60 > 9 ? seconds % 60 : '0' + seconds % 60;
-		appendMinutes.innerHTML = minutes > 9 ? minutes : '0' + minutes;
-		appendHours.innerHTML = hours > 9 ? hours : '0' + hours;
-
-	}
-
-	async function uploadVideo(blob) {
-		const url = `${API_URL}/ext/video`;
-		const formData = new FormData();
-		formData.append('title', document.getElementById('title').value);
-		formData.append('description', document.getElementById('description').value);
-		formData.append('date', new Date().toISOString().slice(0, 16));
-		const filename = `video_${Math.floor(Math.random() * 100000000)}.mp4`;
-		formData.append('video', blob, filename);
-		const token = await GetStorageToken("token");
-
-		const xhr = new XMLHttpRequest();
-
-		xhr.upload.addEventListener('progress', (event) => {
-			if (event.lengthComputable) {
-				const percentComplete = (event.loaded / event.total) * 100;
-				progressBar.style.width = percentComplete + '%';
-
-				if (percentComplete === 100) {
-					setTimeout(() => {
-						progressBar.style.display = 'none';
-						cancelButton.style.display = 'none';
-						progressBars.style.display = "none";
-					}, 500)
-				}
-			}
-		});
-
-		cancelButton.addEventListener('click', () => {
-			xhr.abort();
-		});
-
-		xhr.open('POST', url);
-		xhr.setRequestHeader('Authorization', 'bearer ' + token);
-
-		xhr.onload = () => {
-			if (xhr.status === 200) {
-				alert('Video uploaded successfully');
-			} else {
-				const x = JSON.parse(xhr.response);
-				alert(x.error.message[0]);
-			}
-		};
-
-		xhr.send(formData);
-	}
 });
 
 document.getElementById('selectSectionBtn').addEventListener('click', async () => {
-	var Interval;
-	var millisec = 0;
-	var seconds = 0;
-	var minutes = 0;
-	var hours = 0;
-
-	try {
-		chrome.tabCapture.capture({ audio: false, video: true }, function (stream) {
-			if (!stream) {
-				console.error('Error capturing tab:', chrome.runtime.lastError.message);
-				return;
-			}
-
-			const videoContainer = document.getElementById('videoContainer');
-
-			const video = document.createElement('video');
-			video.srcObject = stream;
-			videoContainer.appendChild(video);
-
-			video.onloadedmetadata = () => {
-				video.play();
-
-				const overlayCanvas = document.createElement('canvas');
-				overlayCanvas.id = 'overlay';
-				overlayCanvas.width = video.videoWidth;
-				overlayCanvas.height = video.videoHeight;
-				videoContainer.appendChild(overlayCanvas);
-
-				const overlayCtx = overlayCanvas.getContext('2d');
-				let startX, startY, endX, endY, isDrawing = false;
-
-				const scaleX = video.videoWidth / video.clientWidth;
-				const scaleY = video.videoHeight / video.clientHeight;
-
-				overlayCanvas.addEventListener('mousedown', (e) => {
-					startX = e.offsetX * scaleX;
-					startY = e.offsetY * scaleY;
-					isDrawing = true;
-				});
-
-				overlayCanvas.addEventListener('mousemove', (e) => {
-					if (!isDrawing) return;
-					endX = e.offsetX * scaleX;
-					endY = e.offsetY * scaleY;
-					overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-					overlayCtx.strokeRect(startX / scaleX, startY / scaleY, (endX - startX) / scaleX, (endY - startY) / scaleY);
-				});
-
-				overlayCanvas.addEventListener('mouseup', () => {
-					isDrawing = false;
-					const cropArea = {
-						x: Math.min(startX, endX),
-						y: Math.min(startY, endY),
-						width: Math.abs(endX - startX),
-						height: Math.abs(endY - startY)
-					};
-					setupCroppedViewAndStartRecording(video, cropArea);
-					videoContainer.removeChild(overlayCanvas);
-
-				});
-			};
-
-			function setupCroppedViewAndStartRecording(video, cropArea) {
-				const cropCanvas = document.createElement('canvas');
-				cropCanvas.id = 'cropCanvas';
-				cropCanvas.width = cropArea.width;
-				cropCanvas.height = cropArea.height;
-				videoContainer.appendChild(cropCanvas);
-
-				const ctx = cropCanvas.getContext('2d');
-				video.style.display = 'none';
-				cropCanvas.style.display = 'none';
-
-				const drawFrame = () => {
-					ctx.drawImage(video, cropArea.x, cropArea.y, cropArea.width, cropArea.height, 0, 0, cropCanvas.width, cropCanvas.height);
-					requestAnimationFrame(drawFrame);
-				};
-
-				drawFrame();
-
-				startRecording(cropCanvas);
-			}
-
-			async function startRecording(canvas) {
-				const mediaRecorder = new MediaRecorder(canvas.captureStream(), {
-					mimeType: 'video/webm;codecs=vp9'
-				});
-
-				$('#btnRecordStart').removeClass('disabled');
-
-				mediaRecorder.ondataavailable = function (event) {
-					if (event.data.size > 0) {
-						const blob = event.data;
-						document.body.insertAdjacentHTML('beforeend', `<button id="uploadButton" style="min-width: max-content;">Upload Recording</button><br>`);
-
-						const uploadButton = document.getElementById('uploadButton');
-						uploadButton.addEventListener('click', () => uploadVideo(blob));
-					}
-				};
-
-				startButton.addEventListener('click', () => {
-					mediaRecorder.start();
-					updateBadge('REC');
-
-					clearInterval(Interval);
-					Interval = setInterval(startTimer, 10);
-
-					$('#btnRecordStart').addClass('disabled');
-					$('#btnRecordStop').removeClass('disabled');
-				});
-
-				stopButton.addEventListener('click', () => {
-					mediaRecorder.stop();
-					updateBadge('');
-
-					clearInterval(Interval);
-
-					$('#btnRecordStop').addClass('disabled');
-				});
-			}
-
-			function startTimer() {
-				millisec++;
-
-				if (millisec > 99) {
-					seconds++;
-					millisec = 0;
-				}
-
-				hours = Math.floor(seconds / 3600);
-				minutes = Math.floor(seconds % 3600 / 60);
-
-				appendSeconds.innerHTML = seconds % 60 > 9 ? seconds % 60 : '0' + seconds % 60;
-				appendMinutes.innerHTML = minutes > 9 ? minutes : '0' + minutes;
-				appendHours.innerHTML = hours > 9 ? hours : '0' + hours;
-
-			}
-
-			async function uploadVideo(blob) {
-				const url = `${API_URL}/ext/video`;
-				const formData = new FormData();
-				formData.append('title', document.getElementById('title').value);
-				formData.append('description', document.getElementById('description').value);
-				formData.append('date', new Date().toISOString().slice(0, 16));
-				const filename = `video_${Math.floor(Math.random() * 100000000)}.mp4`;
-				formData.append('video', blob, filename);
-				const token = await GetStorageToken("token");
-
-				const xhr = new XMLHttpRequest();
-
-				xhr.upload.addEventListener('progress', (event) => {
-					if (event.lengthComputable) {
-						const percentComplete = (event.loaded / event.total) * 100;
-						progressBar.style.width = percentComplete + '%';
-
-						if (percentComplete === 100) {
-							setTimeout(() => {
-								progressBar.style.display = 'none';
-								cancelButton.style.display = 'none';
-								progressBars.style.display = "none";
-							}, 500)
-						}
-					}
-				});
-
-				cancelButton.addEventListener('click', () => {
-					xhr.abort();
-				});
-
-				xhr.open('POST', url);
-				xhr.setRequestHeader('Authorization', 'bearer ' + token);
-
-				xhr.onload = () => {
-					if (xhr.status === 200) {
-						alert('Video uploaded successfully');
-					} else {
-						const x = JSON.parse(xhr.response);
-						alert(x.error.message[0]);
-					}
-				};
-
-				xhr.send(formData);
-			}
-
+	chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+		const activeTab = tabs[0];
+		await chrome.scripting.executeScript({
+			target: { tabId: activeTab.id },
+			files: ['contentScript.js']
 		});
-		// const stream = await navigator.mediaDevices.getDisplayMedia({
-		// 	video: { cursor: 'always', displaySurface: "window" },
-		// 	audio: true,
-		// });
+	});
+
+	chrome.tabs.captureVisibleTab(null, { format: 'png' }, function (dataUrl) {
+		const img = new Image();
+		img.src = dataUrl;
+
+		const videoContainer = document.getElementById('videoContainer');
+		img.style.maxWidth = '100%';
+		img.style.height = 'auto';
+
+		img.onload = function () {
+			videoContainer.appendChild(img);
+
+			const resizeObserver = new ResizeObserver(() => {
+				overlayCanvas.width = img.clientWidth;
+				overlayCanvas.height = img.clientHeight;
+			});
+
+			const overlayCanvas = document.createElement('canvas');
+			overlayCanvas.id = 'overlay';
+			overlayCanvas.style.position = "absolute";
+			overlayCanvas.style.top = "0";
+			overlayCanvas.style.left = "0";
+			videoContainer.appendChild(overlayCanvas);
+
+			resizeObserver.observe(img);
+			updateOverlaySize();
+
+			window.addEventListener('resize', updateOverlaySize);
+
+			function updateOverlaySize() {
+				overlayCanvas.width = img.clientWidth;
+				overlayCanvas.height = img.clientHeight;
+			}
+
+			const overlayCtx = overlayCanvas.getContext('2d');
+			let startX, startY, endX, endY, isDrawing = false;
+
+			const scaleX = img.naturalWidth / img.clientWidth;
+			const scaleY = img.naturalHeight / img.clientHeight;
+
+			overlayCanvas.addEventListener('mousedown', (e) => {
+				startX = e.offsetX * scaleX;
+				startY = e.offsetY * scaleY;
+				isDrawing = true;
+			});
+
+			overlayCanvas.addEventListener('mousemove', (e) => {
+				if (!isDrawing) return;
+				endX = e.offsetX * scaleX;
+				endY = e.offsetY * scaleY;
+				overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+				overlayCtx.strokeStyle = 'red';
+				overlayCtx.lineWidth = 2;
+				overlayCtx.strokeRect(startX / scaleX, startY / scaleY, (endX - startX) / scaleX, (endY - startY) / scaleY);
+			});
+
+			overlayCanvas.addEventListener('mouseup', () => {
+				isDrawing = false;
+				const cropArea = {
+					x: Math.min(startX, endX),
+					y: Math.min(startY, endY),
+					width: Math.abs(endX - startX),
+					height: Math.abs(endY - startY)
+				};
+
+				chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+					chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartSectionRecordingBtn' });
+				});
+
+				chrome.runtime.sendMessage({
+					type: 'PREPARE_SECTION_VIDEO_RECORDING',
+					sx: cropArea.x,
+					sy: cropArea.y,
+					sWidth: cropArea.width,
+					sHeight: cropArea.height,
+					dx: 0,
+					dy: 0,
+					dWidth: cropArea.width,
+					dHeight: cropArea.height
+				});
+
+				overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+				videoContainer.removeChild(img);
+			});
+		};
+	});
 
 
 
-	} catch (err) {
-		console.error('Failed to start recording:', err);
-		alert('Failed to start recording: ' + err.message);
-	}
-})
+	// try {
+	// 	chrome.tabCapture.capture({ audio: false, video: true }, function (stream) {
+	// 		if (!stream) {
+	// 			console.error('Error capturing tab:', chrome.runtime.lastError.message);
+	// 			return;
+	// 		}
+
+	// 		const videoContainer = document.getElementById('videoContainer');
+
+	// 		const video = document.createElement('video');
+	// 		video.srcObject = stream;
+	// 		videoContainer.appendChild(video);
+
+	// 		video.onloadedmetadata = () => {
+	// 			video.play();
+
+	// 			const overlayCanvas = document.createElement('canvas');
+	// 			overlayCanvas.id = 'overlay';
+	// 			overlayCanvas.width = video.videoWidth;
+	// 			overlayCanvas.height = video.videoHeight;
+	// 			videoContainer.appendChild(overlayCanvas);
+
+	// 			const overlayCtx = overlayCanvas.getContext('2d');
+	// 			let startX, startY, endX, endY, isDrawing = false;
+
+	// 			const scaleX = video.videoWidth / video.clientWidth;
+	// 			const scaleY = video.videoHeight / video.clientHeight;
+
+	// 			overlayCanvas.addEventListener('mousedown', (e) => {
+	// 				startX = e.offsetX * scaleX;
+	// 				startY = e.offsetY * scaleY;
+	// 				isDrawing = true;
+	// 			});
+
+	// 			overlayCanvas.addEventListener('mousemove', (e) => {
+	// 				if (!isDrawing) return;
+	// 				endX = e.offsetX * scaleX;
+	// 				endY = e.offsetY * scaleY;
+	// 				overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+	// 				overlayCtx.strokeRect(startX / scaleX, startY / scaleY, (endX - startX) / scaleX, (endY - startY) / scaleY);
+	// 			});
+
+	// 			overlayCanvas.addEventListener('mouseup', () => {
+	// 				isDrawing = false;
+	// 				const cropArea = {
+	// 					x: Math.min(startX, endX),
+	// 					y: Math.min(startY, endY),
+	// 					width: Math.abs(endX - startX),
+	// 					height: Math.abs(endY - startY)
+	// 				};
+	// 				setupCroppedViewAndStartRecording(video, cropArea);
+	// 				videoContainer.removeChild(overlayCanvas);
+
+	// 			});
+	// 		};
+
+	// 		function setupCroppedViewAndStartRecording(video, cropArea) {
+	// 			const cropCanvas = document.createElement('canvas');
+	// 			cropCanvas.id = 'cropCanvas';
+	// 			cropCanvas.width = cropArea.width;
+	// 			cropCanvas.height = cropArea.height;
+	// 			videoContainer.appendChild(cropCanvas);
+
+	// 			const ctx = cropCanvas.getContext('2d');
+	// 			video.style.display = 'none';
+	// 			cropCanvas.style.display = 'none';
+
+	// 			const drawFrame = () => {
+	// 				ctx.drawImage(video, cropArea.x, cropArea.y, cropArea.width, cropArea.height, 0, 0, cropCanvas.width, cropCanvas.height);
+	// 				requestAnimationFrame(drawFrame);
+	// 			};
+
+	// 			drawFrame();
+
+	// 			chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+	// 				chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartSectionRecordingBtn' });
+	// 			});
+
+	// 			chrome.runtime.sendMessage({
+	// 				type: 'PREPARE_SECTION_VIDEO_RECORDING',
+	// 				sx: cropArea.x,
+	// 				sy: cropArea.y,
+	// 				sWidth: cropArea.width,
+	// 				sHeight: cropArea.height,
+	// 				dx: 0,
+	// 				dy: 0,
+	// 				dWidth: cropCanvas.width,
+	// 				dHeight: cropCanvas.height
+	// 			});
+
+	// 			const tracks = stream.getTracks();
+	// 			tracks.forEach(track => track.stop());
+	// 		}
+
+	// 		async function startRecording(canvas) {
+	// 			const mediaRecorder = new MediaRecorder(canvas.captureStream(), {
+	// 				mimeType: 'video/webm;codecs=vp9'
+	// 			});
+
+	// 			$('#btnRecordStart').removeClass('disabled');
+
+	// 			mediaRecorder.ondataavailable = function (event) {
+	// 				if (event.data.size > 0) {
+	// 					const blob = event.data;
+
+	// 					// Send the blob to background.js
+	// 					sendBlobToBackground(blob);
+	// 				}
+	// 			};
+
+	// 			startButton.addEventListener('click', () => {
+	// 				mediaRecorder.start();
+	// 				updateBadge('REC');
+
+	// 				clearInterval(Interval);
+	// 				Interval = setInterval(startTimer, 10);
+
+	// 				$('#btnRecordStart').addClass('disabled');
+	// 				$('#btnRecordStop').removeClass('disabled');
+	// 			});
+
+	// 			stopButton.addEventListener('click', () => {
+	// 				mediaRecorder.stop();
+	// 				updateBadge('');
+
+	// 				clearInterval(Interval);
+
+	// 				$('#btnRecordStop').addClass('disabled');
+	// 			});
+	// 		}
+
+
+	// 		function sendBlobToBackground(blob) {
+	// 			const reader = new FileReader();
+	// 			reader.onloadend = function () {
+	// 				const base64data = reader.result.split(',')[1];
+	// 				chrome.runtime.sendMessage({
+	// 					type: 'UPLOAD_VIDEO',
+	// 					data: base64data,
+	// 					contentType: blob.type
+	// 				}, (response) => {
+	// 					console.log(response.message);
+	// 				});
+	// 			};
+	// 			reader.readAsDataURL(blob);
+	// 		}
+
+	// 	});
+
+	// } catch (err) {
+	// 	console.error('Failed to start recording:', err);
+	// 	alert('Failed to start recording: ' + err.message);
+	// }
+});
+
+async function GetStorageToken(key) {
+	return new Promise((resolve, reject) => {
+		chrome.storage.local.get(key, (result) => {
+			resolve(result[key]);
+		});
+	});
+}
+
 
 async function GetStorageToken(key) {
 	var p = new Promise(function (resolve, reject) {
