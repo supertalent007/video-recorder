@@ -17,30 +17,87 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
     if (message.type === "START_RECORDING") {
         console.log('START VIDEO RECORDING');
-        chrome.tabCapture.capture({ audio: false, video: true }, function (stream) {
+        // chrome.tabCapture.capture({ audio: true, video: true }, function (stream) {
+        //     if (!stream) {
+        //         console.error('Error capturing tab:', chrome.runtime.lastError.message);
+        //         return;
+        //     }
+
+        //     mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+
+        //     recordedChunks = [];
+
+        //     mediaRecorder.ondataavailable = function (event) {
+        //         if (event.data.size > 0) {
+        //             recordedChunks.push(event.data);
+        //         }
+        //     };
+
+        //     mediaRecorder.start();
+        // });
+
+        chrome.tabCapture.capture({ audio: true, video: true }, function (stream) {
             if (!stream) {
                 console.error('Error capturing tab:', chrome.runtime.lastError.message);
                 return;
             }
 
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+            const videoContainer = document.getElementById('videoContainer');
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.controls = true;
+            videoContainer.appendChild(video);
+            recordedChunks = [];
 
-            const chunks = [];
+            video.onloadedmetadata = () => {
+                video.play();
 
-            mediaRecorder.ondataavailable = function (event) {
-                if (event.data.size > 0) {
-                    chunks.push(event.data);
-                }
+                setupCroppedViewAndStartRecording(video, cropArea);
             };
 
-            mediaRecorder.onstop = async function () {
-                const blob = new Blob(chunks, { type: 'video/webm' });
+            function setupCroppedViewAndStartRecording(video, cropArea) {
+                const cropCanvas = document.createElement('canvas');
+                cropCanvas.id = 'cropCanvas';
+                cropCanvas.width = video.videoWidth;
+                cropCanvas.height = video.videoHeight;
+                videoContainer.appendChild(cropCanvas);
 
-                await uploadVideo(blob);
-            };
+                const ctx = cropCanvas.getContext('2d');
 
-            mediaRecorder.start();
+                const drawFrame = () => {
+                    ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+                    ctx.drawImage(video, 0, 0, cropCanvas.width, cropCanvas.height);
+                    requestAnimationFrame(drawFrame);
+                };
+
+                drawFrame();
+                startRecording(cropCanvas, stream);
+            }
+
+            async function startRecording(canvas, originalStream) {
+                const croppedVideoStream = canvas.captureStream();
+
+                const audioTrack = originalStream.getAudioTracks()[0];
+                const combinedStream = new MediaStream([audioTrack]);
+
+                croppedVideoStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
+
+                mediaRecorder = new MediaRecorder(combinedStream, {
+                    mimeType: 'video/webm;codecs=vp8,opus'
+                });
+
+                mediaRecorder.ondataavailable = function (event) {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                        console.log('Data available:', event.data.size);
+                    }
+                };
+
+                mediaRecorder.start();
+                console.log('MediaRecorder instance:', mediaRecorder);
+            }
         });
+
     } else if (message.type === 'PAUSE_RECORDING') {
         mediaRecorder.pause();
     } else if (message.type === 'RESUME_RECORDING') {
@@ -60,7 +117,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
         cropArea.dHeight = message.dHeight;
 
     } else if (message.type === 'START_SECTION_RECORDING') {
-        chrome.tabCapture.capture({ audio: false, video: true }, function (stream) {
+        chrome.tabCapture.capture({ audio: true, video: true }, function (stream) {
             if (!stream) {
                 console.error('Error capturing tab:', chrome.runtime.lastError.message);
                 return;
@@ -95,42 +152,25 @@ chrome.runtime.onMessage.addListener(async (message) => {
                 };
 
                 drawFrame();
-                startRecording(cropCanvas);
+                startRecording(cropCanvas, stream);
             }
 
-            async function startRecording(canvas) {
-                const croppedStream = canvas.captureStream();
+            async function startRecording(canvas, originalStream) {
+                const croppedVideoStream = canvas.captureStream();
 
-                mediaRecorder = new MediaRecorder(croppedStream, {
-                    mimeType: 'video/webm'
+                const audioTrack = originalStream.getAudioTracks()[0];
+                const combinedStream = new MediaStream([audioTrack]);
+
+                croppedVideoStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
+
+                mediaRecorder = new MediaRecorder(combinedStream, {
+                    mimeType: 'video/webm;codecs=vp8,opus'
                 });
 
                 mediaRecorder.ondataavailable = function (event) {
                     if (event.data.size > 0) {
                         recordedChunks.push(event.data);
                         console.log('Data available:', event.data.size);
-                    }
-                };
-
-                mediaRecorder.onstop = function () {
-                    if (recordedChunks.length > 0) {
-                        console.log(`Collected ${recordedChunks.length} recordedChunks`);
-                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-
-                        uploadVideo(blob);
-
-                        // const url = URL.createObjectURL(blob);
-                        // const a = document.createElement('a');
-                        // a.style.display = 'none';
-                        // a.href = url;
-                        // a.download = 'section_recording.webm';
-
-                        // document.body.appendChild(a);
-                        // a.click();
-                        // window.URL.revokeObjectURL(url);
-                        // document.body.removeChild(a);
-                    } else {
-                        console.error('No data chunks were collected.');
                     }
                 };
 
@@ -150,6 +190,27 @@ chrome.runtime.onMessage.addListener(async (message) => {
     } else if (message.type === 'STOP_SECTION_RECORDING') {
         if (mediaRecorder) {
             mediaRecorder.stop();
+        }
+    } else if (message.type === 'UPLOAD_VIDEO') {
+        if (recordedChunks.length > 0) {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            uploadVideo(blob);
+        }
+    } else if (message.type === 'DOWNLOAD_VIDEO') {
+        if (recordedChunks.length > 0) {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = 'section_recording.webm';
+
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            console.log("error!!!!!!!!!!!")
         }
     }
 });

@@ -2052,14 +2052,53 @@ function updateBadge(text) {
 }
 
 document.getElementById('fullScreenBtn').addEventListener('click', () => {
+	// chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+	// 	const activeTab = tabs[0];
+	// 	await chrome.scripting.executeScript({
+	// 		target: { tabId: activeTab.id },
+	// 		files: ['contentScript.js']
+	// 	});
+
+	// 	chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartRecordingBtn' });
+	// });
+
 	chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
 		const activeTab = tabs[0];
 		await chrome.scripting.executeScript({
 			target: { tabId: activeTab.id },
-			files: ['contentScript.js']
-		});
+			func: () => {
+				return {
+					width: window.innerWidth,
+					height: window.innerHeight
+				};
+			}
+		}, (results) => {
+			if (results && results[0] && results[0].result) {
+				const { width, height } = results[0].result;
+				console.log(`Current Tab Width: ${width}, Height: ${height}`);
 
-		chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartRecordingBtn' });
+				// You can use the width and height here.
+
+				chrome.scripting.executeScript({
+					target: { tabId: activeTab.id },
+					files: ['contentScript.js']
+				});
+
+				chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartRecordingBtn' });
+
+				chrome.runtime.sendMessage({
+					type: 'PREPARE_SECTION_VIDEO_RECORDING',
+					sx: 0,
+					sy: 0,
+					sWidth: width,
+					sHeight: height,
+					dx: 0,
+					dy: 0,
+					dWidth: width,
+					dHeight: height
+				});
+			}
+		});
 	});
 });
 

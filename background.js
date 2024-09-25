@@ -50,10 +50,20 @@ chrome.runtime.onMessage.addListener(async message => {
   } else if (message.type === 'STOP_VIDEO_RECORDING') {
     chrome.runtime.sendMessage({ type: "STOP_RECORDING" });
   } else if (message.type === 'CLOSE_TAB') {
-    removeOptionTab(optionTabId);
+    await removeOptionTab(optionTabId);
 
     chrome.windows.remove(windowId, function () {
       console.log(`Window with ID ${windowId} has been closed.`);
+    });
+
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+      const activeTab = tabs[0];
+      await chrome.scripting.executeScript({
+        target: { tabId: activeTab.id },
+        files: ['contentScript.js']
+      });
+
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'FINISHED_UPLOADING' });
     });
   } else if (message.type === 'PREPARE_SECTION_VIDEO_RECORDING') {
     chrome.runtime.sendMessage({
@@ -75,6 +85,12 @@ chrome.runtime.onMessage.addListener(async message => {
     chrome.runtime.sendMessage({ type: 'PAUSE_SECTION_RECORDING' });
   } else if (message.type === 'RESUME_SECTION_VIDEO_RECORDING') {
     chrome.runtime.sendMessage({ type: 'RESUME_SECTION_RECORDING' });
+  } else if (message.type === 'RELOAD') {
+    chrome.runtime.reload();
+  } else if (message.type === 'UPLOAD_VIDEO_RECORDING') {
+    chrome.runtime.sendMessage({ type: 'UPLOAD_VIDEO' });
+  } else if (message.type === 'DOWNLOAD_VIDEO_RECORDING') {
+    chrome.runtime.sendMessage({ type: 'DOWNLOAD_VIDEO' });
   }
 });
 
@@ -85,6 +101,35 @@ function E() {
     url: `chrome-extension://${chrome.runtime.id}/content.html`
   });
 }
+// function VE() {
+//   return new Promise((resolve, reject) => {
+//     chrome.windows.create({
+//       type: 'normal',
+//       focused: false,
+//       url: `chrome-extension://${chrome.runtime.id}/video.html` // Open the URL during window creation
+//     }, function (window) {
+//       if (chrome.runtime.lastError) {
+//         return reject(chrome.runtime.lastError);
+//       }
+
+//       console.log('New window created with ID:', window.id);
+//       windowId = window.id;
+
+//       chrome.windows.update(window.id, { state: 'minimized' }, function (updatedWindow) {
+//         if (chrome.runtime.lastError) {
+//           return reject(chrome.runtime.lastError);
+//         }
+
+//         console.log('Window minimized with ID:', updatedWindow.id);
+
+//         // Find the newly created tab (this will be the only tab)
+//         const tabId = updatedWindow.tabs[0].id;
+//         resolve(tabId);
+//       });
+//     });
+//   });
+// }
+
 function VE() {
   return new Promise((resolve, reject) => {
     chrome.windows.create({
@@ -117,20 +162,14 @@ function VE() {
           console.log('New tab created with ID:', tab.id);
           resolve(tab.id);
         });
+
+        chrome.tabs.query({ windowId: window.id }, function (tabs) {
+          chrome.tabs.remove(tabs[0].id, function () { })
+        });
       });
     });
   });
 }
-
-
-// function VE() {
-//   return chrome.tabs.create({
-//     pinned: true,
-//     active: false,
-//     url: `chrome-extension://${chrome.runtime.id}/video.html`
-//   });
-// }
-
 
 async function removeOptionTab(e) {
   recordStatus = 'INIT';
