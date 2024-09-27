@@ -44,7 +44,8 @@ const modalCSS = `
 
     #timer {
         font-size: 18px;
-        margin-left: 15px;
+        color: #3a3a3a;
+        margin-top: 3px;
     }
 
     .disabled {
@@ -78,20 +79,17 @@ const modalCSS = `
         spacing: 1;
     }
 
-    #timer {
-        color: #3a3a3a;
-    }
-
     .none {
         display: none !important;
     }
 
 `;
 
-injectCSS(modalCSS);
 
 // Check if the modal already exists before creating it
 if (!document.getElementById('screenRecorderModal')) {
+    injectCSS(modalCSS);
+
     const modal = document.createElement('div');
     modal.id = 'screenRecorderModal';
     modal.style.fontFamily = 'Arial, sans-serif';
@@ -143,7 +141,78 @@ if (!document.getElementById('screenRecorderModal')) {
     document.body.appendChild(modal);
 }
 
+function createProgressBar() {
+    const overlayDiv = document.createElement('div');
+    overlayDiv.id = 'overlay';
+    overlayDiv.style.position = 'fixed';
+    overlayDiv.style.top = '0';
+    overlayDiv.style.left = '0';
+    overlayDiv.style.right = '0';
+    overlayDiv.style.bottom = '0';
+    overlayDiv.style.background = 'rgba(0, 0, 0, 0.5)';
+    overlayDiv.style.zIndex = 9998;
+    overlayDiv.style.display = 'none';
+
+    const progressBarContainer = document.createElement('div');
+    progressBarContainer.id = 'progress-bar';
+    progressBarContainer.style.position = 'fixed';
+    progressBarContainer.style.top = '50%';
+    progressBarContainer.style.left = '50%';
+    progressBarContainer.style.transform = 'translate(-50%, -50%)';
+    progressBarContainer.style.width = '300px';
+    progressBarContainer.style.height = '40px';
+    progressBarContainer.style.borderRadius = '16px';
+    progressBarContainer.style.zIndex = 9999;
+    progressBarContainer.style.display = 'none';
+
+    const message = document.createElement('span');
+    message.id = 'progress-message';
+    message.style.fontSize = '16px';
+    message.style.color = '#FFFFFF';
+    message.style.display = 'flex';
+    message.style.justifyContent = 'center';
+    message.style.padding = '5px 10px';
+    message.style.borderRadius = '8px';
+    message.innerText = 'Please wait, your video is uploading...';
+
+    progressBarContainer.appendChild(message);
+
+    const progressBarInner = document.createElement('div');
+    progressBarInner.id = 'progress-bar-inner';
+    progressBarInner.style.height = '100%';
+    progressBarInner.style.backgroundColor = '#fec80e';
+    progressBarInner.style.borderRadius = '16px';
+    progressBarInner.style.width = '0';
+
+    progressBarContainer.appendChild(progressBarInner);
+    document.body.appendChild(overlayDiv);
+    document.body.appendChild(progressBarContainer);
+}
+
+function updateProgressBar(percentage) {
+    const progressBarInner = document.getElementById('progress-bar-inner');
+    const progressBarContainer = document.getElementById('progress-bar');
+    const overlayDiv = document.getElementById('overlay');
+
+    if (progressBarInner) {
+        progressBarInner.style.width = `${percentage}%`;
+    }
+    if (percentage === 100) {
+        const message = document.getElementById('progress-message');
+        message.innerText = 'Successfully uploaded the video!';
+        setTimeout(() => {
+            progressBarContainer.style.display = 'none';
+            overlayDiv.style.display = 'none';
+            progressBarInner.style.width = '0';
+            message.innerText = 'Please wait, your video is uploading...';
+        }, 2000);
+    }
+}
+
 var isFullWidth = true;
+if (!document.getElementById('progress-bar')) {
+    createProgressBar();
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'enableStartRecordingBtn') {
@@ -165,8 +234,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         } else {
             sendResponse({ status: 'failure', message: 'Button not found' });
         }
-    } else if (message.action === 'FINISHED_UPLOADING') {
-        window.alert('Uploading video is finished.')
+    } else if (message.action === 'UPLOAD_PROGRESS') {
+        const progressBarContainer = document.getElementById('progress-bar');
+        const overlayDiv = document.getElementById('overlay');
+        overlayDiv.style.display = 'block';
+        progressBarContainer.style.display = 'flex';
+        progressBarContainer.style.flexDirection = 'column';
+        updateProgressBar(message.progress);
     }
 
     return true;

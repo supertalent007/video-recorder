@@ -1,5 +1,5 @@
 const API_URL = "https://yourarchiv.com/api";
-let recordedChunks = [];
+var recordedChunks = [];
 var mediaRecorder;
 var cropArea = {
     sx: 0,
@@ -11,6 +11,15 @@ var cropArea = {
     dWidth: 0,
     dHeight: 0
 };
+var title = '';
+var description = '';
+
+const options = {
+    mimeType: 'video/webm;codecs=vp8,opus',
+    videoBitsPerSecond: 2500000,
+    bitsPerSecond: 2500000
+};
+
 
 chrome.runtime.onMessage.addListener(async (message) => {
     console.log("video.js received message:", message);
@@ -75,16 +84,14 @@ chrome.runtime.onMessage.addListener(async (message) => {
             }
 
             async function startRecording(canvas, originalStream) {
-                const croppedVideoStream = canvas.captureStream();
+                const croppedVideoStream = canvas.captureStream(30);
 
                 const audioTrack = originalStream.getAudioTracks()[0];
                 const combinedStream = new MediaStream([audioTrack]);
 
                 croppedVideoStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
 
-                mediaRecorder = new MediaRecorder(combinedStream, {
-                    mimeType: 'video/webm;codecs=vp8,opus'
-                });
+                mediaRecorder = new MediaRecorder(combinedStream, options);
 
                 mediaRecorder.ondataavailable = function (event) {
                     if (event.data.size > 0) {
@@ -115,6 +122,8 @@ chrome.runtime.onMessage.addListener(async (message) => {
         cropArea.dy = message.dy;
         cropArea.dWidth = message.dWidth;
         cropArea.dHeight = message.dHeight;
+        title = message.title;
+        description = message.description;
 
     } else if (message.type === 'START_SECTION_RECORDING') {
         chrome.tabCapture.capture({ audio: true, video: true }, function (stream) {
@@ -156,16 +165,14 @@ chrome.runtime.onMessage.addListener(async (message) => {
             }
 
             async function startRecording(canvas, originalStream) {
-                const croppedVideoStream = canvas.captureStream();
+                const croppedVideoStream = canvas.captureStream(30);
 
                 const audioTrack = originalStream.getAudioTracks()[0];
                 const combinedStream = new MediaStream([audioTrack]);
 
                 croppedVideoStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
 
-                mediaRecorder = new MediaRecorder(combinedStream, {
-                    mimeType: 'video/webm;codecs=vp8,opus'
-                });
+                mediaRecorder = new MediaRecorder(combinedStream, options);
 
                 mediaRecorder.ondataavailable = function (event) {
                     if (event.data.size > 0) {
@@ -218,8 +225,8 @@ chrome.runtime.onMessage.addListener(async (message) => {
 async function uploadVideo(blob) {
     const url = `${API_URL}/ext/video`;
     const formData = new FormData();
-    formData.append('title', 'Real Test Sectional Screen Video');
-    formData.append('description', 'This is a test sectional screen video');
+    formData.append('title', title);
+    formData.append('description', description);
     formData.append('date', new Date().toISOString().slice(0, 16));
     const filename = `video_${Math.floor(Math.random() * 100000000)}.webm`;
     formData.append('video', blob, filename);
@@ -230,10 +237,17 @@ async function uploadVideo(blob) {
     xhr.open('POST', url);
     xhr.setRequestHeader('Authorization', 'bearer ' + token);
 
+    // Add event listener for progress
+    xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100);
+            console.log(progress)
+            chrome.runtime.sendMessage({ type: 'UPLOAD_PROGRESS_BAR', progress: progress });
+        }
+    });
+
     xhr.onload = () => {
         if (xhr.status === 200) {
-            // alert('Video uploaded successfully');
-            chrome.runtime.sendMessage({ type: 'CLOSE_TAB' });
         } else {
             const x = JSON.parse(xhr.response);
             alert(x.error.message[0]);
@@ -246,6 +260,7 @@ async function uploadVideo(blob) {
 
     xhr.send(formData);
 }
+
 
 async function GetStorageToken(key) {
     return new Promise((resolve, reject) => {

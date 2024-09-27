@@ -55,16 +55,6 @@ chrome.runtime.onMessage.addListener(async message => {
     chrome.windows.remove(windowId, function () {
       console.log(`Window with ID ${windowId} has been closed.`);
     });
-
-    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-      const activeTab = tabs[0];
-      await chrome.scripting.executeScript({
-        target: { tabId: activeTab.id },
-        files: ['contentScript.js']
-      });
-
-      chrome.tabs.sendMessage(tabs[0].id, { action: 'FINISHED_UPLOADING' });
-    });
   } else if (message.type === 'PREPARE_SECTION_VIDEO_RECORDING') {
     chrome.runtime.sendMessage({
       type: "PREPARE_SECTION_RECORDING",
@@ -75,7 +65,9 @@ chrome.runtime.onMessage.addListener(async message => {
       dx: message.dx,
       dy: message.dy,
       dWidth: message.dWidth,
-      dHeight: message.dHeight
+      dHeight: message.dHeight,
+      title: message.title,
+      description: message.description
     });
   } else if (message.type === 'START_SECTION_VIDEO_RECORDING') {
     chrome.runtime.sendMessage({ type: 'START_SECTION_RECORDING' });
@@ -91,6 +83,10 @@ chrome.runtime.onMessage.addListener(async message => {
     chrome.runtime.sendMessage({ type: 'UPLOAD_VIDEO' });
   } else if (message.type === 'DOWNLOAD_VIDEO_RECORDING') {
     chrome.runtime.sendMessage({ type: 'DOWNLOAD_VIDEO' });
+  } else if (message.type === 'UPLOAD_PROGRESS_BAR') {
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'UPLOAD_PROGRESS', progress: message.progress });
+    });
   }
 });
 

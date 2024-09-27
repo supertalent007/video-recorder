@@ -425,6 +425,8 @@ async function SelectTab(tab) {
 		$("#audioPanel").hide();
 		$("#videoPanel").hide();
 		$("#description").show();
+
+		chrome.runtime.sendMessage({ type: 'CLOSE_TAB' });
 	} else {
 		$("#btnrecording").css("color", "#fff");
 		$("#tabText").css("color", "black");
@@ -571,6 +573,7 @@ async function Stop() {
 		type: 'AUDIO_PAUSE'
 	});
 	var comment = prompt("Please enter a comment for the recording:");
+	// var comment = document.getElementById('title').value;
 	if (comment === null) {
 		chrome.runtime.sendMessage({
 			type: 'AUDIO_RECORD'
@@ -2052,52 +2055,20 @@ function updateBadge(text) {
 }
 
 document.getElementById('fullScreenBtn').addEventListener('click', () => {
-	// chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-	// 	const activeTab = tabs[0];
-	// 	await chrome.scripting.executeScript({
-	// 		target: { tabId: activeTab.id },
-	// 		files: ['contentScript.js']
-	// 	});
-
-	// 	chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartRecordingBtn' });
-	// });
-
 	chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
 		const activeTab = tabs[0];
 		await chrome.scripting.executeScript({
 			target: { tabId: activeTab.id },
-			func: () => {
-				return {
-					width: window.innerWidth,
-					height: window.innerHeight
-				};
-			}
-		}, (results) => {
-			if (results && results[0] && results[0].result) {
-				const { width, height } = results[0].result;
-				console.log(`Current Tab Width: ${width}, Height: ${height}`);
+			files: ['contentScript.js']
+		});
 
-				// You can use the width and height here.
+		chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartRecordingBtn' });
 
-				chrome.scripting.executeScript({
-					target: { tabId: activeTab.id },
-					files: ['contentScript.js']
-				});
-
-				chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartRecordingBtn' });
-
-				chrome.runtime.sendMessage({
-					type: 'PREPARE_SECTION_VIDEO_RECORDING',
-					sx: 0,
-					sy: 0,
-					sWidth: width,
-					sHeight: height,
-					dx: 0,
-					dy: 0,
-					dWidth: width,
-					dHeight: height
-				});
-			}
+		chrome.runtime.sendMessage({
+			type: 'PREPARE_SECTION_VIDEO_RECORDING',
+			// title: document.getElementById('title').value,
+			title: tabs[0].title ? tabs[0].title : '',
+			description: document.getElementById('description').value
 		});
 	});
 });
@@ -2177,19 +2148,22 @@ document.getElementById('selectSectionBtn').addEventListener('click', async () =
 
 				chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
 					chrome.tabs.sendMessage(tabs[0].id, { action: 'enableStartSectionRecordingBtn' });
+
+					chrome.runtime.sendMessage({
+						type: 'PREPARE_SECTION_VIDEO_RECORDING',
+						sx: cropArea.x,
+						sy: cropArea.y,
+						sWidth: cropArea.width,
+						sHeight: cropArea.height,
+						dx: 0,
+						dy: 0,
+						dWidth: cropArea.width,
+						dHeight: cropArea.height,
+						title: tabs[0].title ? tabs[0].title : '',
+						description: document.getElementById('description').value
+					});
 				});
 
-				chrome.runtime.sendMessage({
-					type: 'PREPARE_SECTION_VIDEO_RECORDING',
-					sx: cropArea.x,
-					sy: cropArea.y,
-					sWidth: cropArea.width,
-					sHeight: cropArea.height,
-					dx: 0,
-					dy: 0,
-					dWidth: cropArea.width,
-					dHeight: cropArea.height
-				});
 
 				overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 				videoContainer.removeChild(img);
